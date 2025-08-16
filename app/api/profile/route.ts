@@ -84,7 +84,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     // First, get the profile to check for photos that need cleanup
-    const profile = await db.findProfile(session.user.username!)
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+    const profile = await db.findProfile(username)
     
     // Clean up profile photo from Cloudinary if it exists
     if (profile?.profilePhoto?.publicId) {
