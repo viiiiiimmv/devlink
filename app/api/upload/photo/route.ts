@@ -12,11 +12,14 @@ cloudinary.config({
 
 export async function POST(req: import('next/server').NextRequest) {
   try {
-    // Check if user is authenticated
+    // Check if user is authenticated and has email
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || typeof session.user.email !== 'string') {
+    if (!session || !session.user || !session.user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    // Ensure we have user's email for the upload
+    const userEmail = session.user.email;
 
     const formData = await req.formData();
     const file = formData.get('photo');
@@ -35,7 +38,7 @@ export async function POST(req: import('next/server').NextRequest) {
         {
           resource_type: 'image',
           folder: 'portfolio/profile-photos',
-          public_id: `profile_${session.user.email}`,
+                public_id: `${userEmail}_profile_photo`,
           overwrite: true,
           transformation: [
             { width: 400, height: 400, crop: 'fill', gravity: 'face' },
