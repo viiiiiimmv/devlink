@@ -29,6 +29,11 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Type guard for session user
+  const hasUsername = (session: any): session is { user: { username: string } } => {
+    return session?.user?.username != null
+  }
+
   useEffect(() => {
     if (status === 'loading') return // Still loading session
     
@@ -38,7 +43,7 @@ export default function Dashboard() {
     }
 
     if (status === 'authenticated') {
-      if (session?.user?.username) {
+      if (hasUsername(session)) {
         fetchProfile()
       } else {
         // User is authenticated but doesn't have username, redirect to setup

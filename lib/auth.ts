@@ -65,15 +65,18 @@ export const authOptions: NextAuthOptions = {
       }
       return token
     },
-    async session({ session, token }): Promise<Session> {
-      if (session.user) {
-        session.user.id = token.id
-        session.user.username = token.username as string | undefined
-        session.user.email = token.email as string
-        session.user.name = token.name as string | undefined
-        session.user.image = token.picture as string | undefined
+    async session({ session, token }) {
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.id,
+          username: token.username || null,
+          email: token.email || '',
+          name: token.name || null,
+          image: token.picture || null
+        }
       }
-      return session
     },
     async redirect({ url, baseUrl }) {
       // Allows relative callback URLs
