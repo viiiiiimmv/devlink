@@ -15,13 +15,19 @@ cloudinary.config({
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
-    const profile = await db.findProfile(session.user.username)
-    
+    const profile = await db.findProfile(username)
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
@@ -101,31 +107,46 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { username } = await request.json()
+    const { username: newUsername } = await request.json()
 
-    if (!username) {
+    if (!newUsername) {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 })
     }
 
     // Validate username format
-    if (!/^[a-z][a-z0-9]*[a-z][a-z0-9]*$|^[a-z][a-z0-9]*$/.test(username)) {
+    if (!/^[a-z][a-z0-9]*[a-z][a-z0-9]*$|^[a-z][a-z0-9]*$/.test(newUsername)) {
       return NextResponse.json({ 
         error: 'Username must start with a letter, contain at least one letter, and only use lowercase letters and numbers' 
       }, { status: 400 })
     }
 
     // Check if username is available
-    if (!(await db.isUsernameAvailable(username))) {
+    if (!(await db.isUsernameAvailable(newUsername))) {
       return NextResponse.json({ error: 'Username is already taken' }, { status: 400 })
     }
 
     // Update username
-    const success = await db.updateUsername(session.user.email, username)
+    let email: string | undefined = undefined;
+    if (session && session.user && typeof session.user.email === 'string') {
+      email = session.user.email;
+    }
+    if (!email) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+    const success = await db.updateUsername(email, newUsername)
 
     if (!success) {
       return NextResponse.json({ error: 'Failed to update username' }, { status: 500 })
@@ -134,21 +155,21 @@ export async function PATCH(request: NextRequest) {
     // Revalidate the old and new profile paths
     // Use fallback logic for old username
     let oldUsername: string | undefined = undefined;
-    if (session.user && 'username' in session.user && typeof session.user.username === 'string') {
+    if (session && session.user && 'username' in session.user && typeof session.user.username === 'string') {
       oldUsername = session.user.username;
-    } else {
+    } else if (email) {
       // Try to fetch from DB if not present
-      const dbUser = await db.findUser(session.user.email);
+      const dbUser = await db.findUser(email);
       if (dbUser?.username) oldUsername = dbUser.username;
     }
     if (oldUsername) {
       revalidatePath(`/${oldUsername}`);
     }
-    revalidatePath(`/${username}`);
+    revalidatePath(`/${newUsername}`);
 
     return NextResponse.json({ 
       success: true, 
-      username,
+      username: newUsername,
       message: 'Username updated successfully'
     })
   } catch (error) {

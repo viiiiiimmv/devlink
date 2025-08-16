@@ -9,13 +9,19 @@ import { revalidatePath } from 'next/cache'
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
-    const profile = await db.findProfile(session.user.username)
-    
+    const profile = await db.findProfile(username)
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
@@ -30,8 +36,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
@@ -43,7 +57,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title and description are required' }, { status: 400 })
     }
 
-    const profile = await db.findProfile(session.user.username)
+    const profile = await db.findProfile(username)
     
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
@@ -61,12 +75,12 @@ export async function POST(request: NextRequest) {
     }
 
     const updatedProjects = [...(profile.projects || []), newProject]
-    await db.updateProfile(session.user.username, {
+    await db.updateProfile(username, {
       projects: updatedProjects
     })
 
     // Revalidate the profile page to ensure fresh data is shown
-    revalidatePath(`/${session.user.username}`)
+    revalidatePath(`/${username}`)
 
     return NextResponse.json({ project: newProject }, { status: 201 })
   } catch (error) {
@@ -78,13 +92,21 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
     const { id, ...updates } = await request.json()
-    const profile = await db.findProfile(session.user.username)
+    const profile = await db.findProfile(username)
     
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
@@ -94,12 +116,12 @@ export async function PUT(request: NextRequest) {
       project.id === id ? { ...project, ...updates } : project
     )
 
-    const updatedProfile = await db.updateProfile(session.user.username, {
+    const updatedProfile = await db.updateProfile(username, {
       projects: updatedProjects
     })
 
     // Revalidate the profile page to ensure fresh data is shown
-    revalidatePath(`/${session.user.username}`)
+    revalidatePath(`/${username}`)
 
     return NextResponse.json(updatedProfile)
   } catch (error) {
@@ -111,9 +133,17 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
-      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -123,19 +153,19 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
     }
 
-    const profile = await db.findProfile(session.user.username)
+    const profile = await db.findProfile(username)
     
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
     const updatedProjects = profile.projects.filter(project => project.id !== projectId)
-    const updatedProfile = await db.updateProfile(session.user.username, {
+    const updatedProfile = await db.updateProfile(username, {
       projects: updatedProjects
     })
 
     // Revalidate the profile page to ensure fresh data is shown
-    revalidatePath(`/${session.user.username}`)
+    revalidatePath(`/${username}`)
 
     return NextResponse.json(updatedProfile)
   } catch (error) {

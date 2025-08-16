@@ -8,17 +8,22 @@ import { v4 as uuidv4 } from 'uuid'
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
-    const profile = await db.findProfile(session.user.username)
-    
+    const profile = await db.findProfile(username)
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
-
     return NextResponse.json({ certifications: profile.certifications || [] })
   } catch (error) {
     console.error('Error fetching certifications:', error)
@@ -30,27 +35,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
     const body = await request.json()
     const { name, issuer, date, credentialId, credentialUrl } = body
-
     // Validation
     if (!name || !issuer || !date) {
       return NextResponse.json({ 
         error: 'Name, issuer and date are required' 
       }, { status: 400 })
     }
-
-    const profile = await db.findProfile(session.user.username)
-    
+    const profile = await db.findProfile(username)
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
-
     const newCertification = {
       id: uuidv4(),
       name: name.trim(),
@@ -59,12 +67,10 @@ export async function POST(request: NextRequest) {
       credentialId: credentialId?.trim() || '',
       credentialUrl: credentialUrl?.trim() || ''
     }
-
     const updatedCertifications = [...(profile.certifications || []), newCertification]
-    await db.updateProfile(session.user.username, {
+    await db.updateProfile(username, {
       certifications: updatedCertifications
     })
-
     return NextResponse.json({ certification: newCertification }, { status: 201 })
   } catch (error) {
     console.error('Certification creation error:', error)
@@ -76,30 +82,33 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
     const body = await request.json()
     const { id, name, issuer, date, credentialId, credentialUrl } = body
-
     if (!id || !name || !issuer || !date) {
       return NextResponse.json({ 
         error: 'ID, name, issuer and date are required' 
       }, { status: 400 })
     }
-
-    const profile = await db.findProfile(session.user.username)
+    const profile = await db.findProfile(username)
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
-
     const certificationIndex = profile.certifications?.findIndex(c => c.id === id)
     if (certificationIndex === -1 || certificationIndex === undefined) {
       return NextResponse.json({ error: 'Certification not found' }, { status: 404 })
     }
-
     const updatedCertification = {
       id,
       name: name.trim(),
@@ -108,14 +117,11 @@ export async function PUT(request: NextRequest) {
       credentialId: credentialId?.trim() || '',
       credentialUrl: credentialUrl?.trim() || ''
     }
-
     const updatedCertifications = [...(profile.certifications || [])]
     updatedCertifications[certificationIndex] = updatedCertification
-
-    await db.updateProfile(session.user.username, {
+    await db.updateProfile(username, {
       certifications: updatedCertifications
     })
-
     return NextResponse.json({ certification: updatedCertification })
   } catch (error) {
     console.error('Certification update error:', error)
@@ -127,29 +133,31 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
     const { searchParams } = new URL(request.url)
     const certificationId = searchParams.get('id')
-    
     if (!certificationId) {
       return NextResponse.json({ error: 'Certification ID is required' }, { status: 400 })
     }
-
-    const profile = await db.findProfile(session.user.username)
-    
+    const profile = await db.findProfile(username)
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
-
     const updatedCertifications = profile.certifications?.filter(cert => cert.id !== certificationId) || []
-    await db.updateProfile(session.user.username, {
+    await db.updateProfile(username, {
       certifications: updatedCertifications
     })
-
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Certification deletion error:', error)
