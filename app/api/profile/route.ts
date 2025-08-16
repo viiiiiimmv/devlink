@@ -1,0 +1,149 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { db } from '@/lib/db'
+import { v2 as cloudinary } from 'cloudinary'
+import { revalidatePath } from 'next/cache'
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.username) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    const profile = await db.findProfile(session.user.username)
+    
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    // Add cache control headers to prevent stale data
+    const response = NextResponse.json(profile)
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
+  } catch (error) {
+    console.error('Profile fetch error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.username) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    const updates = await request.json()
+    
+    const updatedProfile = await db.updateProfile(session.user.username, updates)
+    
+    if (!updatedProfile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(updatedProfile)
+  } catch (error) {
+    console.error('Profile update error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    // First, get the profile to check for photos that need cleanup
+    const profile = await db.findProfile(session.user.username!)
+    
+    // Clean up profile photo from Cloudinary if it exists
+    if (profile?.profilePhoto?.publicId) {
+      try {
+        await cloudinary.uploader.destroy(profile.profilePhoto.publicId)
+        console.log('Profile photo cleaned up:', profile.profilePhoto.publicId)
+      } catch (error) {
+        console.error('Error cleaning up profile photo:', error)
+        // Don't fail the deletion if photo cleanup fails
+      }
+    }
+
+    // Delete both user and profile
+    const success = await db.deleteUserAndProfile(session.user.email)
+    
+    if (!success) {
+      return NextResponse.json({ error: 'Failed to delete profile' }, { status: 500 })
+    }
+
+    return NextResponse.json({ message: 'Profile deleted successfully' })
+  } catch (error) {
+    console.error('Profile deletion error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    const { username } = await request.json()
+
+    if (!username) {
+      return NextResponse.json({ error: 'Username is required' }, { status: 400 })
+    }
+
+    // Validate username format
+    if (!/^[a-z][a-z0-9]*[a-z][a-z0-9]*$|^[a-z][a-z0-9]*$/.test(username)) {
+      return NextResponse.json({ 
+        error: 'Username must start with a letter, contain at least one letter, and only use lowercase letters and numbers' 
+      }, { status: 400 })
+    }
+
+    // Check if username is available
+    if (!(await db.isUsernameAvailable(username))) {
+      return NextResponse.json({ error: 'Username is already taken' }, { status: 400 })
+    }
+
+    // Update username
+    const success = await db.updateUsername(session.user.email, username)
+    
+    if (!success) {
+      return NextResponse.json({ error: 'Failed to update username' }, { status: 500 })
+    }
+
+    // Revalidate the old and new profile paths
+    if (session.user.username) {
+      revalidatePath(`/${session.user.username}`)
+    }
+    revalidatePath(`/${username}`)
+
+    return NextResponse.json({ 
+      success: true, 
+      username,
+      message: 'Username updated successfully'
+    })
+  } catch (error) {
+    console.error('Username update error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
