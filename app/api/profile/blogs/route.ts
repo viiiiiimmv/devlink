@@ -37,7 +37,14 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.username) {
+
+    let username = (session?.user && 'username' in session.user) ? (session.user as any).username : undefined;
+    // If username is not present, try to fetch profile by email
+    if (!username && session?.user?.email) {
+      const userProfile = await db.findProfileByUserId(session.user.email)
+      username = userProfile?.username
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
@@ -58,7 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 })
     }
 
-    const profile = await db.findProfile(session.user.username)
+  const profile = await db.findProfile(username)
     
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
@@ -73,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const updatedBlogs = [...(profile.blogs || []), newBlog]
-    await db.updateProfile(session.user.username, {
+  await db.updateProfile(username, {
       blogs: updatedBlogs
     })
 
