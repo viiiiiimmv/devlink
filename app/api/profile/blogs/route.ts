@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { v4 as uuidv4 } from 'uuid'
 
-// GET - Fetch all blogs for the authenticated user
+// GET - Fetch all blogs for the authenticated use
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
