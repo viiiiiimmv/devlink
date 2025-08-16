@@ -126,16 +126,25 @@ export async function PATCH(request: NextRequest) {
 
     // Update username
     const success = await db.updateUsername(session.user.email, username)
-    
+
     if (!success) {
       return NextResponse.json({ error: 'Failed to update username' }, { status: 500 })
     }
 
     // Revalidate the old and new profile paths
-    if (session.user.username) {
-      revalidatePath(`/${session.user.username}`)
+    // Use fallback logic for old username
+    let oldUsername: string | undefined = undefined;
+    if (session.user && 'username' in session.user && typeof session.user.username === 'string') {
+      oldUsername = session.user.username;
+    } else {
+      // Try to fetch from DB if not present
+      const dbUser = await db.findUser(session.user.email);
+      if (dbUser?.username) oldUsername = dbUser.username;
     }
-    revalidatePath(`/${username}`)
+    if (oldUsername) {
+      revalidatePath(`/${oldUsername}`);
+    }
+    revalidatePath(`/${username}`);
 
     return NextResponse.json({ 
       success: true, 

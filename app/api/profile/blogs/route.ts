@@ -160,7 +160,16 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.username) {
+    let username: string | undefined = undefined;
+    if (session && session.user) {
+      if ('username' in session.user && typeof session.user.username === 'string') {
+        username = session.user.username;
+      } else if ('email' in session.user && typeof session.user.email === 'string') {
+        const dbUser = await db.findUser(session.user.email);
+        if (dbUser?.username) username = dbUser.username;
+      }
+    }
+    if (!username) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
@@ -171,14 +180,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Blog ID is required' }, { status: 400 })
     }
 
-    const profile = await db.findProfile(session.user.username)
+    const profile = await db.findProfile(username)
     
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
     const updatedBlogs = profile.blogs?.filter(blog => blog.id !== blogId) || []
-    await db.updateProfile(session.user.username, {
+    await db.updateProfile(username, {
       blogs: updatedBlogs
     })
 
