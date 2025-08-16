@@ -14,7 +14,7 @@ export async function POST(req: import('next/server').NextRequest) {
   try {
     // Check if user is authenticated
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session || !session.user || typeof session.user.email !== 'string') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -30,7 +30,7 @@ export async function POST(req: import('next/server').NextRequest) {
     const buffer = Buffer.from(bytes);
 
     // Upload to Cloudinary
-  const result = await new Promise<any>((resolve, reject) => {
+    const result = await new Promise<any>((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
           resource_type: 'image',
