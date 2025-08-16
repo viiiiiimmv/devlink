@@ -1,7 +1,9 @@
-import { NextAuthOptions } from 'next-auth'
+import { NextAuthOptions, Session, User } from 'next-auth'
+import { JWT } from 'next-auth/jwt'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
 import { db } from '@/lib/db'
+import { AdapterUser } from 'next-auth/adapters'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -37,12 +39,12 @@ export const authOptions: NextAuthOptions = {
           
           if (!existingUser) {
             // Create new user
-              await db.createUser({
-                email: user.email!,
-                name: user.name!,
-                image: user.image ?? undefined,
-                provider: account.provider,
-              })
+            await db.createUser({
+              email: user.email!,
+              name: user.name!,
+              image: user.image ?? undefined,
+              provider: account.provider,
+            })
           }
           return true
         } catch (error) {
@@ -52,31 +54,15 @@ export const authOptions: NextAuthOptions = {
       }
       return false
     },
-    async jwt({ token, user, trigger }) {
-      if (user) {
+    async jwt({ token, account, user }) {
+      if (account && user) {
         token.id = user.id
-      }
-      
-      // Always fetch latest user data to get current username
-      if (token.email) {
-        try {
-          const dbUser = await db.findUser(token.email as string)
-          if (dbUser) {
-            token.id = dbUser._id || token.id
-            token.username = dbUser.username
-            if (process.env.NODE_ENV === 'development') {
-              console.log('JWT callback - Updated token for user:', token.email, 'with username:', dbUser.username)
-            }
-          } else {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('JWT callback - No user found in DB for email:', token.email)
-            }
-          }
-        } catch (error) {
-          console.error('JWT callback error:', error)
+        // Get user from database to include username
+        const dbUser = await db.findUser(user.email!)
+        if (dbUser?.username) {
+          token.username = dbUser.username
         }
       }
-      
       return token
     },
     async session({ session, token }) {
