@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:auth": "node scripts/test-auth.js"
+    "test:auth": "node scripts/test-auth.js",
+    "mongo:docker": "docker-compose up -d",
+    "mongo:stop": "docker-compose down",
+    "setup:help": "echo 'Please read SETUP-MONGODB.md for MongoDB setup instructions'"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

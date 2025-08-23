@@ -76,19 +76,14 @@ export default function Setup() {
         const data = await response.json()
         toast.success('Setup completed successfully!')
         
-        // Update the session to include the new username
-        await updateSession({
-          ...session,
-          user: {
-            ...session?.user,
-            username: username
-          }
-        })
+        // Force session refresh by calling update with username
+        await updateSession({ username: username })
         
-        // Redirect to dashboard after a short delay
+        // Give some time for the session to update then redirect
         setTimeout(() => {
-          router.push('/dashboard')
-        }, 1000)
+          // Force a hard navigation to ensure middleware sees updated session
+          window.location.href = '/dashboard'
+        }, 1500)
       } else {
         const error = await response.json()
         toast.error(error.message || 'Setup failed')

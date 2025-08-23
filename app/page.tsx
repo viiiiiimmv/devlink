@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ArrowRight, Code, Palette, Share, Zap, Users, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { SimpleThemeToggle } from '@/components/ui/theme-toggle'
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
@@ -56,7 +57,7 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Navigation */}
       <motion.nav 
-        className="fixed w-full top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100"
+        className="fixed w-full top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -65,11 +66,12 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Code className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">DevLink</span>
+              <span className="ml-2 text-xl font-bold text-foreground">DevLink</span>
             </div>
             <div className="flex items-center space-x-4">
+              <SimpleThemeToggle />
               <Link href="/auth/signin">
-                <Button variant="ghost" className="text-gray-600 hover:text-gray-900">
+                <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
                   Sign In
                 </Button>
               </Link>
@@ -93,7 +95,7 @@ export default function Home() {
             animate="animate"
           >
             <motion.h1 
-              className="text-5xl md:text-7xl font-bold text-gray-900 mb-6"
+              className="text-5xl md:text-7xl font-bold text-foreground mb-6"
               variants={fadeIn}
             >
               Build Your
@@ -103,7 +105,7 @@ export default function Home() {
             </motion.h1>
             
             <motion.p 
-              className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto"
+              className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
               variants={fadeIn}
             >
               Create a stunning developer portfolio in minutes. Showcase your projects, 
@@ -136,18 +138,18 @@ export default function Home() {
             >
               <div>
                 <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">1000+</div>
-                <div className="text-gray-600">Developers</div>
+                <div className="text-2xl font-bold text-foreground">1000+</div>
+                <div className="text-muted-foreground">Developers</div>
               </div>
               <div>
                 <Star className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">50+</div>
-                <div className="text-gray-600">Templates</div>
+                <div className="text-2xl font-bold text-foreground">50+</div>
+                <div className="text-muted-foreground">Templates</div>
               </div>
               <div>
                 <Zap className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">2 min</div>
-                <div className="text-gray-600">Setup Time</div>
+                <div className="text-2xl font-bold text-foreground">2 min</div>
+                <div className="text-muted-foreground">Setup Time</div>
               </div>
             </motion.div>
           </motion.div>
@@ -155,7 +157,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50" id="features">
+      <section className="py-20 bg-muted/30" id="features">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
             className="text-center mb-16"
@@ -164,10 +166,10 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
               Everything You Need
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-muted-foreground">
               Powerful features to showcase your developer journey
             </p>
           </motion.div>
@@ -182,15 +184,15 @@ export default function Home() {
             {features.map((feature, index) => (
               <motion.div
                 key={index}
-                className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                className="bg-card p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-border"
                 variants={fadeIn}
                 whileHover={{ y: -5 }}
               >
                 <feature.icon className="h-12 w-12 text-blue-600 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   {feature.description}
                 </p>
               </motion.div>
@@ -228,14 +230,14 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-muted py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Code className="h-6 w-6 text-blue-400" />
-              <span className="ml-2 text-lg font-semibold">DevLink</span>
+              <Code className="h-6 w-6 text-blue-600" />
+              <span className="ml-2 text-lg font-semibold text-foreground">DevLink</span>
             </div>
-            <p className="text-gray-400">
+            <p className="text-muted-foreground">
               © 2024 DevLink. Built with ❤️ for developers.
             </p>
           </div>

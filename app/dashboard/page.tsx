@@ -88,8 +88,8 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-muted-foreground">
               Welcome back, {profile?.name || 'Developer'}! 👋
             </p>
           </div>
@@ -126,8 +126,8 @@ export default function Dashboard() {
                       <BarChart3 className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                      <p className="text-sm text-gray-600">{stat.label}</p>
+                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
                     </div>
                   </div>
                 </CardContent>

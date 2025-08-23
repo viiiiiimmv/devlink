@@ -54,7 +54,7 @@ export const authOptions: NextAuthOptions = {
       }
       return false
     },
-    async jwt({ token, account, user }) {
+    async jwt({ token, account, user, trigger }) {
       if (account && user) {
         token.id = user.id
         // Get user from database to include username
@@ -63,6 +63,23 @@ export const authOptions: NextAuthOptions = {
           token.username = dbUser.username
         }
       }
+      
+      // If the session is being updated, refresh username from database
+      if (trigger === 'update' && token.email) {
+        const dbUser = await db.findUser(token.email as string)
+        if (dbUser?.username) {
+          token.username = dbUser.username
+        }
+      }
+      
+      // Also check for username if token doesn't have it but user exists
+      if (!token.username && token.email) {
+        const dbUser = await db.findUser(token.email as string)
+        if (dbUser?.username) {
+          token.username = dbUser.username
+        }
+      }
+      
       return token
     },
     async session({ session, token }) {
