@@ -19,7 +19,7 @@ interface Profile {
   projects: any[]
   experiences: any[]
   certifications: any[]
-  blogs: any[]
+  researches: any[]
   theme: string
 }
 
@@ -79,7 +79,7 @@ export default function Dashboard() {
     { label: 'Projects', value: profile.projects.length, color: 'bg-blue-500' },
     { label: 'Experiences', value: profile.experiences.length, color: 'bg-green-500' },
     { label: 'Certifications', value: profile.certifications.length, color: 'bg-purple-500' },
-    { label: 'Blog Posts', value: profile.blogs.length, color: 'bg-orange-500' },
+    { label: 'Research Papers', value: profile.researches.length, color: 'bg-orange-500' },
   ] : []
 
   return (

@@ -35,7 +35,7 @@ class Database {
       projects: profile.projects?.map((project: any) => ({ ...project, _id: undefined })) || [],
       experiences: profile.experiences?.map((experience: any) => ({ ...experience, _id: undefined })) || [],
       certifications: profile.certifications?.map((certification: any) => ({ ...certification, _id: undefined })) || [],
-      blogs: profile.blogs?.map((blog: any) => ({ ...blog, _id: undefined })) || [],
+      researches: profile.researches?.map((research: any) => ({ ...research, _id: undefined })) || [],
       createdAt: profile.createdAt,
       updatedAt: profile.updatedAt
     }

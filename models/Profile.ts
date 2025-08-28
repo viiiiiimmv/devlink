@@ -32,7 +32,7 @@ export interface ICertification {
   credentialUrl?: string
 }
 
-export interface IBlog {
+export interface IResearch {
   id: string
   title: string
   description: string
@@ -66,7 +66,7 @@ export interface IProfile extends Document {
   projects: IProject[]
   experiences: IExperience[]
   certifications: ICertification[]
-  blogs: IBlog[]
+  researches: IResearch[]
   createdAt: Date
   updatedAt: Date
 }
@@ -103,7 +103,7 @@ const CertificationSchema = new Schema({
   credentialUrl: { type: String, trim: true },
 })
 
-const BlogSchema = new Schema({
+const ResearchSchema = new Schema({
   id: { type: String, required: true },
   title: { type: String, required: true, trim: true },
   description: { type: String, required: true, trim: true },
@@ -178,7 +178,7 @@ const ProfileSchema = new Schema<IProfile>({
   projects: [ProjectSchema],
   experiences: [ExperienceSchema],
   certifications: [CertificationSchema],
-  blogs: [BlogSchema],
+  researches: [ResearchSchema],
 }, {
   timestamps: true,
 })

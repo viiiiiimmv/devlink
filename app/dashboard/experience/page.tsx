@@ -129,7 +129,7 @@ export default function ExperiencePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Experience</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Experience</h1>
             <p className="text-gray-600">
               Showcase your professional journey and achievements
             </p>

@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         projects: [],
         experiences: [],
         certifications: [],
-        blogs: [],
+        researches: [],
         createdAt: new Date(),
         updatedAt: new Date(),
       }

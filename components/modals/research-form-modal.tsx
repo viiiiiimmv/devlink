@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import toast from 'react-hot-toast'
 
-interface BlogPost {
+interface ResearchPost {
   id?: string
   title: string
   description: string
@@ -22,20 +22,20 @@ interface BlogPost {
   publishedAt: string
 }
 
-interface BlogFormModalProps {
+interface ResearchFormModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  blog?: BlogPost
+  research?: ResearchPost
 }
 
-export default function BlogFormModal({
+export default function ResearchFormModal({
   isOpen,
   onClose,
   onSuccess,
-  blog
-}: BlogFormModalProps) {
-  const [formData, setFormData] = useState<BlogPost>({
+  research
+}: ResearchFormModalProps) {
+  const [formData, setFormData] = useState<ResearchPost>({
     title: '',
     description: '',
     url: '',
@@ -43,11 +43,11 @@ export default function BlogFormModal({
   })
   const [loading, setLoading] = useState(false)
 
-  const isEditing = !!blog?.id
+  const isEditing = !!research?.id
 
   useEffect(() => {
-    if (blog) {
-      setFormData(blog)
+    if (research) {
+      setFormData(research)
     } else {
       setFormData({
         title: '',
@@ -56,7 +56,7 @@ export default function BlogFormModal({
         publishedAt: ''
       })
     }
-  }, [blog, isOpen])
+  }, [research, isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,7 +77,7 @@ export default function BlogFormModal({
     setLoading(true)
 
     try {
-      const url = '/api/profile/blogs'
+      const url = '/api/profile/researches'
       const method = isEditing ? 'PUT' : 'POST'
       
       const response = await fetch(url, {
@@ -88,15 +88,15 @@ export default function BlogFormModal({
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to save blog post')
+        throw new Error(error.error || 'Failed to save research paper')
       }
 
-      toast.success(isEditing ? 'Blog post updated successfully!' : 'Blog post created successfully!')
+      toast.success(isEditing ? 'Research paper updated successfully!' : 'Research paper created successfully!')
       onSuccess()
       onClose()
     } catch (error) {
-      console.error('Error saving blog post:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to save blog post')
+      console.error('Error saving research paper:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to save research paper')
     } finally {
       setLoading(false)
     }
@@ -107,12 +107,12 @@ export default function BlogFormModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Edit Blog Post' : 'Add New Blog Post'}
+            {isEditing ? 'Edit Research Paper' : 'Add New Research Paper'}
           </DialogTitle>
           <DialogDescription>
             {isEditing 
-              ? 'Update your blog post information below.'
-              : 'Fill out the form below to add a new blog post to your portfolio.'
+              ? 'Update your research paper information below.'
+              : 'Fill out the form below to add a new new research paperto your portfolio.'
             }
           </DialogDescription>
         </DialogHeader>
@@ -120,12 +120,12 @@ export default function BlogFormModal({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">Blog Post Title *</Label>
+            <Label htmlFor="title">Research Paper Title *</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Enter the title of your blog post"
+              placeholder="Enter the title of your research paper"
               required
             />
           </div>
@@ -137,7 +137,7 @@ export default function BlogFormModal({
               id="description"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description or summary of the blog post"
+              placeholder="Brief description or summary of the research paper"
               rows={3}
               required
             />
@@ -145,17 +145,17 @@ export default function BlogFormModal({
 
           {/* URL */}
           <div className="space-y-2">
-            <Label htmlFor="url">Blog Post URL *</Label>
+            <Label htmlFor="url">Research Paper URL *</Label>
             <Input
               id="url"
               type="url"
               value={formData.url}
               onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-              placeholder="https://yourblog.com/post-title"
+              placeholder="https://yourresearch.com/post-title"
               required
             />
             <p className="text-sm text-gray-600">
-              Link to your blog post on Medium, Dev.to, your personal blog, etc.
+              Link to your research papers
             </p>
           </div>
 
@@ -185,7 +185,7 @@ export default function BlogFormModal({
               {loading ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
               ) : null}
-              {isEditing ? 'Update Blog Post' : 'Add Blog Post'}
+              {isEditing ? 'Update Research Paper' : 'Add Research Paper'}
             </Button>
           </div>
         </form>

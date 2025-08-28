@@ -29,7 +29,7 @@ export interface Profile {
   projects: Project[]
   experiences: Experience[]
   certifications: Certification[]
-  blogs: Blog[]
+  researches: Research[]
 }
 
 interface Project {
@@ -64,7 +64,7 @@ interface Certification {
   credentialUrl?: string
 }
 
-interface Blog {
+interface Research {
   id: string
   title: string
   description: string
@@ -89,7 +89,7 @@ export default function PublicProfile({ profile }: PublicProfileProps) {
     projects: profile.projects || [],
     experiences: profile.experiences || [],
     certifications: profile.certifications || [],
-    blogs: profile.blogs || [],
+    researches: profile.researches || [],
     socialLinks: profile.socialLinks || {},
     bio: profile.bio || '',
     name: profile.name || 'Developer',
@@ -480,8 +480,8 @@ export default function PublicProfile({ profile }: PublicProfileProps) {
           </motion.section>
         )}
 
-        {/* Blog Section */}
-        {safeProfile.blogs && safeProfile.blogs.length > 0 && (
+        {/* Research Section */}
+        {safeProfile.researches && safeProfile.researches.length > 0 && (
           <motion.section 
             className="mb-16"
             initial={{ opacity: 0 }}
@@ -490,12 +490,12 @@ export default function PublicProfile({ profile }: PublicProfileProps) {
             viewport={{ once: true }}
           >
             <h2 className={`text-3xl font-bold mb-8 ${currentTheme.colors.primary}`}>
-              Latest Blog Posts
+              Latest Research Papers
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {safeProfile.blogs.slice(0, 4).map((blog, index) => (
+              {safeProfile.researches.slice(0, 4).map((research, index) => (
                 <motion.div
-                  key={blog.id}
+                  key={research.id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -504,20 +504,20 @@ export default function PublicProfile({ profile }: PublicProfileProps) {
                   <Card className={currentTheme.styles.card}>
                     <CardHeader>
                       <CardTitle className={currentTheme.colors.primary}>
-                        <Link href={blog.url} target="_blank" className="hover:underline">
-                          {blog.title}
+                        <Link href={research.url} target="_blank" className="hover:underline">
+                          {research.title}
                         </Link>
                       </CardTitle>
                       <CardDescription>
-                        {blog.description}
+                        {research.description}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-500">
-                          {new Date(blog.publishedAt).toLocaleDateString()}
+                          {new Date(research.publishedAt).toLocaleDateString()}
                         </span>
-                        <Link href={blog.url} target="_blank">
+                        <Link href={research.url} target="_blank">
                           <Button variant="outline" size="sm">
                             <ExternalLink className="h-4 w-4 mr-2" />
                             Read More

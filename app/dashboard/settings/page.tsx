@@ -128,7 +128,7 @@ export default function SettingsPage() {
     projects: [],
     experiences: [],
     certifications: [],
-    blogs: []
+    researches: []
   }
   const [profileData, setProfileData] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -277,7 +277,7 @@ export default function SettingsPage() {
           projects: prev?.projects ?? [],
           experiences: prev?.experiences ?? [],
           certifications: prev?.certifications ?? [],
-          blogs: prev?.blogs ?? []
+          researches: prev?.researches ?? []
         }))
         setUsername(newUsername)
         
@@ -349,7 +349,7 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
             <p className="text-gray-600">
               Customize your portfolio appearance and account settings
             </p>
@@ -370,12 +370,12 @@ export default function SettingsPage() {
           <CardContent>
             <RadioGroup value={selectedTheme} onValueChange={setSelectedTheme} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {themes.map((theme) => (
-                <label key={theme.id} className={`cursor-pointer group block rounded-lg border-2 p-3 transition-all duration-150 ${selectedTheme === theme.id ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-blue-300'}`}
+                <label key={theme.id} className={`cursor-pointer group block rounded-lg border-2 p-3 transition-all duration-150 ${selectedTheme === theme.id ? 'border-blue-500 shadow-lg' : 'border-gray-800 hover:border-blue-300'}`}
                   htmlFor={theme.id}
                 >
                   <div className={`w-full h-16 rounded-lg mb-2 ${theme.preview} transition-all duration-150`} />
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-gray-900 group-hover:text-blue-600">{theme.name}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600">{theme.name}</span>
                     <RadioGroupItem value={theme.id} id={theme.id} className="ml-2" />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">{theme.description}</p>
@@ -385,7 +385,7 @@ export default function SettingsPage() {
             <Button 
               onClick={handleSaveTheme} 
               disabled={saving}
-              className="w-full flex items-center gap-2 mt-6"
+              className="w-full flex items-center gap-2 mt-6 dark:text-white"
             >
               {saving ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
@@ -489,31 +489,34 @@ export default function SettingsPage() {
           </Card>
 
           {/* Danger Zone */}
-          <Card className="border-red-200">
+          <Card className="border-red-200 dark:border-red-800">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700">
+              <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
                 <AlertTriangle className="h-5 w-5" />
-                Danger Zone
+                  Danger Zone
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-red-600 dark:text-red-300">
                 Irreversible and destructive actions
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                  <h3 className="font-medium text-red-800 mb-2">Delete Portfolio</h3>
-                  <p className="text-sm text-red-700 mb-4">
-                    This will permanently delete your portfolio, all your projects, experiences, and data. This action cannot be undone.
+                <div className="p-4 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
+                  <h3 className="font-medium text-red-800 dark:text-red-200 mb-2">
+                    Delete Portfolio
+                  </h3>
+                  <p className="text-sm text-red-700 dark:text-red-300 mb-4">
+                  This will permanently delete your portfolio, all your projects, experiences, 
+                  and data. This action cannot be undone.
                   </p>
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    className="flex items-center gap-2"
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="flex items-center gap-2 dark:hover:bg-red-700"
                     onClick={() => setShowDeleteConfirm(true)}
                   >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Portfolio
+                  <Trash2 className="h-4 w-4" />
+                  Delete Portfolio
                   </Button>
                 </div>
               </div>

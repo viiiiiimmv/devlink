@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { v4 as uuidv4 } from 'uuid'
 
-// GET - Fetch all blogs for the authenticated use
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -25,14 +24,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ blogs: profile.blogs || [] })
+    return NextResponse.json({ researches: profile.researches || [] })
   } catch (error) {
-    console.error('Error fetching blogs:', error)
+    console.error('Error fetching research papers:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// POST - Add a new blog post
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -71,7 +69,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const newBlog = {
+    const newResearch = {
       id: uuidv4(),
       title: title.trim(),
       description: description.trim(),
@@ -79,19 +77,18 @@ export async function POST(request: NextRequest) {
       publishedAt: publishedAt
     }
 
-    const updatedBlogs = [...(profile.blogs || []), newBlog]
+    const updatedResearches = [...(profile.researches || []), newResearch]
   await db.updateProfile(username, {
-      blogs: updatedBlogs
+      researches: updatedResearches
     })
 
-    return NextResponse.json({ blog: newBlog }, { status: 201 })
+    return NextResponse.json({ research: newResearch }, { status: 201 })
   } catch (error) {
-    console.error('Blog creation error:', error)
+    console.error('Research paper creation error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// PUT - Update an existing blog post
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -128,12 +125,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const blogIndex = profile.blogs?.findIndex(b => b.id === id)
-    if (blogIndex === -1 || blogIndex === undefined) {
-      return NextResponse.json({ error: 'Blog post not found' }, { status: 404 })
+    const researchIndex = profile.researches?.findIndex(b => b.id === id)
+    if (researchIndex === -1 || researchIndex === undefined) {
+      return NextResponse.json({ error: 'Research paper not found' }, { status: 404 })
     }
 
-    const updatedBlog = {
+    const updatedResearch = {
       id,
       title: title.trim(),
       description: description.trim(),
@@ -141,21 +138,20 @@ export async function PUT(request: NextRequest) {
       publishedAt
     }
 
-    const updatedBlogs = [...(profile.blogs || [])]
-    updatedBlogs[blogIndex] = updatedBlog
+    const updatedResearches = [...(profile.researches || [])]
+    updatedResearches[researchIndex] = updatedResearch
 
   await db.updateProfile(username, {
-      blogs: updatedBlogs
+      researches: updatedResearches
     })
 
-    return NextResponse.json({ blog: updatedBlog })
+    return NextResponse.json({ research: updatedResearch })
   } catch (error) {
-    console.error('Blog update error:', error)
+    console.error('Research paper update error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// DELETE - Delete a blog post
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -174,10 +170,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const blogId = searchParams.get('id')
+    const researchID = searchParams.get('id')
     
-    if (!blogId) {
-      return NextResponse.json({ error: 'Blog ID is required' }, { status: 400 })
+    if (!researchID) {
+      return NextResponse.json({ error: 'Research Paper ID is required' }, { status: 400 })
     }
 
     const profile = await db.findProfile(username)
@@ -186,14 +182,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const updatedBlogs = profile.blogs?.filter(blog => blog.id !== blogId) || []
+    const updatedResearches = profile.researches?.filter(research => research.id !== researchID) || []
     await db.updateProfile(username, {
-      blogs: updatedBlogs
+      researches: updatedResearches
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Blog deletion error:', error)
+    console.error('Research paper deletion error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

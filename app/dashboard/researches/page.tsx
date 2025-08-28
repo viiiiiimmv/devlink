@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import DashboardLayout from '@/components/dashboard/layout'
-import BlogFormModal from '@/components/modals/blog-form-modal'
+import ResearchFormMdoal from '@/components/modals/research-form-modal'
 import toast from 'react-hot-toast'
 
-interface BlogPost {
+interface ResearchPost {
   id: string
   title: string
   description: string
@@ -19,70 +19,70 @@ interface BlogPost {
   publishedAt: string
 }
 
-export default function BlogsPage() {
+export default function ResearchesPage() {
   const { data: session } = useSession()
-  const [blogs, setBlogs] = useState<BlogPost[]>([])
+  const [researches, setResearches] = useState<ResearchPost[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingBlog, setEditingBlog] = useState<BlogPost | undefined>(undefined)
+  const [editingResearch, setEditingResearch] = useState<ResearchPost | undefined>(undefined)
 
   useEffect(() => {
-    fetchBlogs()
+    fetchResearches()
   }, [])
 
-  const fetchBlogs = async () => {
+  const fetchResearches = async () => {
     try {
-      const response = await fetch('/api/profile/blogs')
+      const response = await fetch('/api/profile/researches')
       if (response.ok) {
         const data = await response.json()
-        setBlogs(data.blogs || [])
+        setResearches(data.researches || [])
       }
     } catch (error) {
-      console.error('Error fetching blogs:', error)
+      console.error('Error fetching researches:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddBlog = () => {
-    setEditingBlog(undefined)
+  const handleAddResearch = () => {
+    setEditingResearch(undefined)
     setIsModalOpen(true)
   }
 
-  const handleEditBlog = (blog: BlogPost) => {
-    setEditingBlog(blog)
+  const handleEditResearch = (research: ResearchPost) => {
+    setEditingResearch(research)
     setIsModalOpen(true)
   }
 
-  const handleDeleteBlog = async (blogId: string) => {
-    if (!confirm('Are you sure you want to delete this blog post?')) {
+  const handleDeleteResearch = async (researchId: string) => {
+    if (!confirm('Are you sure you want to delete this research paper?')) {
       return
     }
 
     try {
-      const response = await fetch(`/api/profile/blogs?id=${blogId}`, {
+      const response = await fetch(`/api/profile/researches?id=${researchId}`, {
         method: 'DELETE'
       })
 
       if (!response.ok) {
-        throw new Error('Failed to delete blog post')
+        throw new Error('Failed to delete research paper')
       }
 
-      toast.success('Blog post deleted successfully!')
-      fetchBlogs()
+      toast.success('Research paper deleted successfully!')
+      fetchResearches()
     } catch (error) {
-      console.error('Error deleting blog post:', error)
-      toast.error('Failed to delete blog post')
+      console.error('Error deleting research paper:', error)
+      toast.error('Failed to delete research paper')
     }
   }
 
   const handleModalClose = () => {
     setIsModalOpen(false)
-    setEditingBlog(undefined)
+    setEditingResearch(undefined)
   }
 
   const handleModalSuccess = () => {
-    fetchBlogs()
+    fetchResearches()
   }
 
   if (loading) {
@@ -101,39 +101,38 @@ export default function BlogsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Blog Posts</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Research Papers</h1>
             <p className="text-gray-600">
               Share your thoughts, tutorials, and technical articles
             </p>
           </div>
-          <Button onClick={handleAddBlog} className="flex items-center gap-2">
+          <Button onClick={handleAddResearch} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            Add Blog Post
+            Add Research Paper
           </Button>
         </div>
 
-        {/* Blog Posts List */}
-        {blogs.length === 0 ? (
+        {researches.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <BookOpen className="h-12 w-12 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No blog posts yet</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 dark:text-white">No research papers yet</h3>
               <p className="text-gray-600 text-center mb-6 max-w-sm">
-                Start sharing your knowledge by adding links to your blog posts or articles.
+                Start sharing your knowledge by adding links to your research articles.
               </p>
-              <Button onClick={handleAddBlog} className="flex items-center gap-2">
+              <Button onClick={handleAddResearch} className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
-                Add Your First Blog Post
+                Add Your First Research Paper
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
-            {blogs.map((blog, index) => (
+            {researches.map((research, index) => (
               <motion.div
-                key={blog.id}
+                key={research.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -147,34 +146,34 @@ export default function BlogsPage() {
                         </div>
                         <div className="flex-1">
                           <CardTitle className="text-xl leading-tight">
-                            {blog.title}
+                            {research.title}
                           </CardTitle>
                           <CardDescription className="mt-2">
-                            {blog.description}
+                            {research.description}
                           </CardDescription>
                           <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
                             <Calendar className="h-4 w-4" />
-                            {new Date(blog.publishedAt).toLocaleDateString()}
+                            {new Date(research.publishedAt).toLocaleDateString()}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" asChild>
-                          <a href={blog.url} target="_blank" rel="noopener noreferrer">
+                          <a href={research.url} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="h-4 w-4" />
                           </a>
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => handleEditBlog(blog)}
+                          onClick={() => handleEditResearch(research)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => handleDeleteBlog(blog.id)}
+                          onClick={() => handleDeleteResearch(research.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -187,12 +186,11 @@ export default function BlogsPage() {
           </div>
         )}
 
-        {/* Blog Form Modal */}
-        <BlogFormModal
+        <ResearchFormMdoal
           isOpen={isModalOpen}
           onClose={handleModalClose}
           onSuccess={handleModalSuccess}
-          blog={editingBlog}
+          research={editingResearch}
         />
       </div>
     </DashboardLayout>

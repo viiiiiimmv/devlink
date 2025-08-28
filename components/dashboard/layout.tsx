@@ -40,7 +40,7 @@ const navigation = [
   { name: 'Projects', href: '/dashboard/projects', icon: Code },
   { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
   { name: 'Certifications', href: '/dashboard/certifications', icon: Award },
-  { name: 'Blog Posts', href: '/dashboard/blogs', icon: BookOpen },
+  { name: 'Research Papers', href: '/dashboard/researches', icon: BookOpen },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
