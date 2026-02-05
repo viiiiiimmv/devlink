@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose'
+import mongoose, { Document, Schema, Types } from 'mongoose'
 
 export interface IProject {
   id: string
@@ -53,7 +53,7 @@ export interface IProfilePhoto {
 }
 
 export interface IProfile extends Document {
-  _id: string
+  _id: Types.ObjectId
   userId: string
   username: string
   name: string
