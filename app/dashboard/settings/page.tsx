@@ -115,7 +115,7 @@ export default function SettingsPage() {
   const router = useRouter()
   const [selectedTheme, setSelectedTheme] = useState('modern')
   const [username, setUsername] = useState('')
-// Fallback mock profile for preview if profileData is incomplete
+  // Fallback mock profile for preview if profileData is incomplete
   const emptyProfile: Profile = {
     username: '',
     name: '',
@@ -146,7 +146,7 @@ export default function SettingsPage() {
   }, [])
 
   const checkUsernameAvailability = async (value: string) => {
-  if (!value || value.length < 3 || value === (profileData?.username ?? '')) {
+    if (!value || value.length < 3 || value === (profileData?.username ?? '')) {
       setUsernameAvailable(null)
       return
     }
@@ -158,7 +158,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: value })
       })
-      
+
       const data = await response.json()
       setUsernameAvailable(data.available)
     } catch (error) {
@@ -173,7 +173,7 @@ export default function SettingsPage() {
     // Clean username: only lowercase letters and numbers, no symbols
     const cleaned = value.toLowerCase().replace(/[^a-z0-9]/g, '')
     setUsername(cleaned)
-    
+
     // Debounce username check
     const timeoutId = setTimeout(() => checkUsernameAvailability(cleaned), 500)
     return () => clearTimeout(timeoutId)
@@ -235,7 +235,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username })
       })
-      
+
       const checkData = await checkResponse.json()
       if (!checkData.available) {
         toast.error('Username is already taken')
@@ -263,7 +263,7 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json()
         toast.success('Username updated successfully!')
-        
+
         // Update local state
         setProfileData(prev => ({
           username: newUsername,
@@ -280,7 +280,7 @@ export default function SettingsPage() {
           researches: prev?.researches ?? []
         }))
         setUsername(newUsername)
-        
+
         // Update session to reflect new username
         await updateSession({
           ...session,
@@ -289,10 +289,10 @@ export default function SettingsPage() {
             username: newUsername
           }
         })
-        
+
         // Close modal
         setShowUsernameConfirm(false)
-        
+
         // Redirect to new profile URL after a short delay
         setTimeout(() => {
           router.push(`/${newUsername}`)
@@ -382,8 +382,8 @@ export default function SettingsPage() {
                 </label>
               ))}
             </RadioGroup>
-            <Button 
-              onClick={handleSaveTheme} 
+            <Button
+              onClick={handleSaveTheme}
               disabled={saving}
               className="w-full flex items-center gap-2 mt-6 dark:text-white"
             >
@@ -407,7 +407,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="w-full h-[70vh] overflow-y-auto bg-gray-100 rounded-lg border border-gray-200">
-               <PortfolioLivePreview profile={profileData ?? emptyProfile} themeId={selectedTheme} />
+              <PortfolioLivePreview profile={profileData ?? emptyProfile} themeId={selectedTheme} />
             </div>
           </CardContent>
         </Card>
@@ -424,10 +424,10 @@ export default function SettingsPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <span className="text-gray-600">devlink.vercel.io/</span>
+                  <span className="text-gray-600">devlink.vercel.app/</span>
                   <div className="flex-1 relative">
-                    <Input 
-                      value={username} 
+                    <Input
+                      value={username}
                       onChange={(e) => handleUsernameChange(e.target.value)}
                       className="pr-10"
                       placeholder="your-username"
@@ -444,7 +444,7 @@ export default function SettingsPage() {
                       <X className="absolute right-3 top-3 h-4 w-4 text-red-600" />
                     )}
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleUpdateUsername}
                     disabled={!username || username === profileData?.username || updatingUsername || usernameAvailable === false}
                     size="sm"
@@ -466,7 +466,7 @@ export default function SettingsPage() {
                         New portfolio URL will be:
                       </p>
                       <p className="font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                        devlink.vercel.io/{username}
+                        devlink.vercel.app/{username}
                       </p>
                       {usernameAvailable === true && (
                         <p className="text-green-600">✓ Username is available!</p>
@@ -477,7 +477,7 @@ export default function SettingsPage() {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="text-xs text-gray-500 mt-2">
                   <p>• Must start with a letter</p>
                   <p>• Must contain at least one letter</p>
@@ -493,7 +493,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
                 <AlertTriangle className="h-5 w-5" />
-                  Danger Zone
+                Danger Zone
               </CardTitle>
               <CardDescription className="text-red-600 dark:text-red-300">
                 Irreversible and destructive actions
@@ -506,8 +506,8 @@ export default function SettingsPage() {
                     Delete Portfolio
                   </h3>
                   <p className="text-sm text-red-700 dark:text-red-300 mb-4">
-                  This will permanently delete your portfolio, all your projects, experiences, 
-                  and data. This action cannot be undone.
+                    This will permanently delete your portfolio, all your projects, experiences,
+                    and data. This action cannot be undone.
                   </p>
                   <Button
                     variant="destructive"
@@ -515,8 +515,8 @@ export default function SettingsPage() {
                     className="flex items-center gap-2 dark:hover:bg-red-700"
                     onClick={() => setShowDeleteConfirm(true)}
                   >
-                  <Trash2 className="h-4 w-4" />
-                  Delete Portfolio
+                    <Trash2 className="h-4 w-4" />
+                    Delete Portfolio
                   </Button>
                 </div>
               </div>
@@ -543,7 +543,7 @@ export default function SettingsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -554,7 +554,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-600">This will permanently delete your account and all data.</p>
                 </div>
               </div>
-              
+
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-800">
                   <strong>What will be deleted:</strong>
@@ -613,7 +613,7 @@ export default function SettingsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="mb-6">
               <p className="text-gray-900">
                 Are you sure you want to change your username from <strong>{profileData?.username}</strong> to <strong>{newUsername}</strong>?

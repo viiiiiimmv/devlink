@@ -32,7 +32,7 @@ export default function Setup() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: value }),
       })
-      
+
       const data = await response.json()
       setIsAvailable(data.available)
     } catch (error) {
@@ -46,7 +46,7 @@ export default function Setup() {
     // Clean username: only lowercase letters and numbers, no symbols
     const cleaned = value.toLowerCase().replace(/[^a-z0-9]/g, '')
     setUsername(cleaned)
-    
+
     // Debounce username check
     const timeoutId = setTimeout(() => checkUsername(cleaned), 500)
     return () => clearTimeout(timeoutId)
@@ -75,10 +75,10 @@ export default function Setup() {
       if (response.ok) {
         const data = await response.json()
         toast.success('Setup completed successfully!')
-        
+
         // Force session refresh by calling update with username
         await updateSession({ username: username })
-        
+
         // Give some time for the session to update then redirect
         setTimeout(() => {
           // Force a hard navigation to ensure middleware sees updated session
@@ -114,7 +114,7 @@ export default function Setup() {
               Choose a username that starts with a letter and contains only lowercase letters and numbers
             </p>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
@@ -138,14 +138,14 @@ export default function Setup() {
                   <div className="absolute right-3 top-3 h-4 w-4 rounded-full bg-red-500" />
                 )}
               </div>
-              
+
               {username && (
                 <div className="text-sm space-y-1">
                   <p className="text-gray-600">
                     Your portfolio will be available at:
                   </p>
                   <p className="font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                    devlink.vercel.io/{username}
+                    devlink.vercel.app/{username}
                   </p>
                   {isAvailable === false && (
                     <p className="text-red-600">
@@ -159,7 +159,7 @@ export default function Setup() {
                   )}
                 </div>
               )}
-              
+
               <div className="text-xs text-gray-500">
                 <p>• Must start with a letter</p>
                 <p>• Must contain at least one letter</p>

@@ -36,7 +36,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (status === 'loading') return // Still loading session
-    
+
     if (status === 'unauthenticated') {
       router.push('/auth/signin?from=/dashboard')
       return
@@ -201,12 +201,12 @@ export default function Dashboard() {
             <CardTitle>Portfolio Status</CardTitle>
             <CardDescription>
               Your portfolio is live at{' '}
-              <Link 
-                href={`/${profile?.username}`} 
+              <Link
+                href={`/${profile?.username}`}
                 target="_blank"
                 className="text-blue-600 hover:underline font-medium"
               >
-                devlink.vercel.io/{profile?.username}
+                devlink.vercel.app/{profile?.username}
               </Link>
             </CardDescription>
           </CardHeader>

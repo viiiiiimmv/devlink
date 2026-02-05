@@ -44,7 +44,7 @@ export default function Home() {
     {
       icon: Share,
       title: 'Easy Sharing',
-      description: 'Share your portfolio with a unique URL - yourname.devlink.vercel.io'
+      description: 'Share your portfolio with a unique URL - yourname.devlink.vercel.app'
     },
     {
       icon: Zap,
@@ -56,7 +56,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Navigation */}
-      <motion.nav 
+      <motion.nav
         className="fixed w-full top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -88,13 +88,13 @@ export default function Home() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             className="text-center"
             variants={staggerChildren}
             initial="initial"
             animate="animate"
           >
-            <motion.h1 
+            <motion.h1
               className="text-5xl md:text-7xl font-bold text-foreground mb-6"
               variants={fadeIn}
             >
@@ -103,22 +103,22 @@ export default function Home() {
                 Developer Story
               </span>
             </motion.h1>
-            
-            <motion.p 
+
+            <motion.p
               className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
               variants={fadeIn}
             >
-              Create a stunning developer portfolio in minutes. Showcase your projects, 
+              Create a stunning developer portfolio in minutes. Showcase your projects,
               skills, and experience with beautiful, responsive themes.
             </motion.p>
 
-            <motion.div 
+            <motion.div
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
               variants={fadeIn}
             >
               <Link href="/auth/signin">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg group"
                 >
                   Create Your Portfolio
@@ -132,7 +132,7 @@ export default function Home() {
               </Link>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center"
               variants={fadeIn}
             >
@@ -159,7 +159,7 @@ export default function Home() {
       {/* Features Section */}
       <section className="py-20 bg-muted/30" id="features">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -174,7 +174,7 @@ export default function Home() {
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
             variants={staggerChildren}
             initial="initial"
@@ -217,8 +217,8 @@ export default function Home() {
               Join thousands of developers who trust DevLink to showcase their work
             </p>
             <Link href="/auth/signin">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 variant="secondary"
                 className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg"
               >
