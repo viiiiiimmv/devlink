@@ -48,6 +48,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const username = (session?.user as { username?: string | null } | undefined)?.username
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -140,7 +141,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             
             <div className="flex items-center gap-4">
               <SimpleThemeToggle />
-              <Link href={`/${session?.user?.username}`} target="_blank">
+              <Link href={`/${username ?? ''}`} target="_blank">
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
                   <Eye className="h-4 w-4" />
                   <span className="hidden sm:inline">View Portfolio</span>
