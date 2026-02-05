@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import { Camera, Upload, X, User } from 'lucide-react'
 
 interface PhotoUploadProps {
@@ -31,7 +32,7 @@ export default function PhotoUpload({ currentPhoto, onPhotoChange, className = '
 
   const uploadPhoto = async (file: File) => {
     setUploading(true)
-    
+
     try {
       const formData = new FormData()
       formData.append('photo', file)
@@ -61,10 +62,10 @@ export default function PhotoUpload({ currentPhoto, onPhotoChange, className = '
       // If it's a new upload, we should delete it from Cloudinary
       // For simplicity, we'll just clear the preview
     }
-    
+
     setPreview(null)
     onPhotoChange(null)
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -80,7 +81,7 @@ export default function PhotoUpload({ currentPhoto, onPhotoChange, className = '
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
-    
+
     const file = e.dataTransfer.files[0]
     if (file) {
       handleFileSelect(file)
@@ -104,17 +105,18 @@ export default function PhotoUpload({ currentPhoto, onPhotoChange, className = '
           {/* Photo Preview */}
           <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100">
             {preview ? (
-              <img
+              <Image
                 src={preview}
                 alt="Profile"
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400">
                 <User size={48} />
               </div>
             )}
-            
+
             {/* Loading Overlay */}
             {uploading && (
               <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
@@ -151,11 +153,10 @@ export default function PhotoUpload({ currentPhoto, onPhotoChange, className = '
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
-          dragOver
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${dragOver
             ? 'border-blue-500 bg-blue-50'
             : 'border-gray-300 hover:border-gray-400'
-        }`}
+          }`}
         onClick={() => fileInputRef.current?.click()}
       >
         <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
