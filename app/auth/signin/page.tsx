@@ -57,6 +57,9 @@ function SignInContent() {
         case 'OAuthAccountNotLinked':
           message = 'Account already exists with different provider.'
           break
+        case 'AccessDenied':
+          message = 'Sign in was denied. Please verify OAuth credentials and try again.'
+          break
         case 'SessionRequired':
           message = 'Please sign in to continue.'
           break

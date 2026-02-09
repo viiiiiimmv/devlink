@@ -4,10 +4,22 @@ import GitHubProvider from 'next-auth/providers/github'
 import { db } from '@/lib/db'
 import type { OAuthProvider } from '@/models/User'
 
-const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim()
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim()
-const githubClientId = process.env.GITHUB_CLIENT_ID?.trim()
-const githubClientSecret = process.env.GITHUB_CLIENT_SECRET?.trim()
+const getEnv = (...keys: string[]): string | undefined => {
+  for (const key of keys) {
+    const value = process.env[key]?.trim()
+    if (value) {
+      return value
+    }
+  }
+
+  return undefined
+}
+
+const googleClientId = getEnv('GOOGLE_CLIENT_ID', 'AUTH_GOOGLE_ID', 'GOOGLE_ID')
+const googleClientSecret = getEnv('GOOGLE_CLIENT_SECRET', 'AUTH_GOOGLE_SECRET', 'GOOGLE_SECRET')
+const githubClientId = getEnv('GITHUB_CLIENT_ID', 'AUTH_GITHUB_ID', 'GITHUB_ID')
+const githubClientSecret = getEnv('GITHUB_CLIENT_SECRET', 'AUTH_GITHUB_SECRET', 'GITHUB_SECRET')
+const nextAuthSecret = getEnv('NEXTAUTH_SECRET', 'AUTH_SECRET')
 
 const hasGoogleProvider = Boolean(googleClientId && googleClientSecret)
 const hasGitHubProvider = Boolean(githubClientId && githubClientSecret)
@@ -17,6 +29,7 @@ const normalizeEmail = (value: unknown): string =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''
 
 export const authOptions: NextAuthOptions = {
+  secret: nextAuthSecret,
   providers: [
     ...(hasGoogleProvider ? [
       GoogleProvider({
@@ -45,13 +58,18 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/signin',
   },
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       const provider = account?.provider
       if (!isOAuthProvider(provider)) {
         return false
       }
 
-      const email = normalizeEmail(user.email)
+      const profileEmail =
+        profile && typeof profile === 'object' && 'email' in profile
+          ? normalizeEmail((profile as { email?: unknown }).email)
+          : ''
+
+      const email = normalizeEmail(user.email) || profileEmail
       if (!email) {
         console.error('SignIn error: missing email from OAuth provider', { provider })
         return false
@@ -65,11 +83,17 @@ export const authOptions: NextAuthOptions = {
           provider,
         })
 
-        return Boolean(dbUser)
+        if (!dbUser) {
+          console.warn('SignIn warning: failed to persist OAuth user, allowing sign-in', {
+            provider,
+            email,
+          })
+        }
       } catch (error) {
-        console.error('SignIn error:', error)
-        return false
+        console.error('SignIn warning: OAuth user upsert failed, allowing sign-in:', error)
       }
+
+      return true
     },
     async jwt({ token, account, user, trigger }) {
       try {
