@@ -237,7 +237,7 @@ export default function ExperienceFormModal({
               onChange={(e) => setFormData(prev => ({ ...prev, linkedinPostUrl: e.target.value }))}
               placeholder="https://www.linkedin.com/posts/..."
             />
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Link to a LinkedIn post about this role (optional)
             </p>
           </div>

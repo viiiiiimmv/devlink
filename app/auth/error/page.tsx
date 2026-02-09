@@ -68,7 +68,7 @@ function ErrorPageContent() {
   const errorInfo = getErrorMessage(error)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -82,7 +82,7 @@ function ErrorPageContent() {
             <CardTitle className="text-2xl font-bold text-red-600">
               {errorInfo.title}
             </CardTitle>
-            <CardDescription className="text-gray-600">
+            <CardDescription className="text-muted-foreground">
               {errorInfo.description}
             </CardDescription>
           </CardHeader>
@@ -94,14 +94,14 @@ function ErrorPageContent() {
                 </Button>
               </Link>
               <Link href="/">
-                <Button variant="ghost" className="w-full text-gray-600 hover:text-gray-900">
+                <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Home
                 </Button>
               </Link>
             </div>
             {error && (
-              <div className="text-center text-xs text-gray-500 mt-4">
+              <div className="text-center text-xs text-muted-foreground mt-4">
                 Error code: {error}
               </div>
             )}

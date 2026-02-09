@@ -176,7 +176,7 @@ export default function CertificationFormModal({
               onChange={(e) => setFormData(prev => ({ ...prev, credentialUrl: e.target.value }))}
               placeholder="https://www.credly.com/badges/..."
             />
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Link to your digital credential or certificate verification page
             </p>
           </div>

@@ -101,8 +101,8 @@ export default function ResearchesPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Research Papers</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Research Papers</h1>
+            <p className="text-muted-foreground">
               Share your thoughts, tutorials, and technical articles
             </p>
           </div>
@@ -115,11 +115,11 @@ export default function ResearchesPage() {
         {researches.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <BookOpen className="h-12 w-12 text-gray-400" />
+              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+                <BookOpen className="h-12 w-12 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 dark:text-white">No research papers yet</h3>
-              <p className="text-gray-600 text-center mb-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-2">No research papers yet</h3>
+              <p className="text-muted-foreground text-center mb-6 max-w-sm">
                 Start sharing your knowledge by adding links to your research articles.
               </p>
               <Button onClick={handleAddResearch} className="flex items-center gap-2">
@@ -141,8 +141,8 @@ export default function ResearchesPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 flex-1">
-                        <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <BookOpen className="h-6 w-6 text-orange-600" />
+                        <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <BookOpen className="h-6 w-6 text-orange-600 dark:text-orange-300" />
                         </div>
                         <div className="flex-1">
                           <CardTitle className="text-xl leading-tight">
@@ -151,7 +151,7 @@ export default function ResearchesPage() {
                           <CardDescription className="mt-2">
                             {research.description}
                           </CardDescription>
-                          <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
+                          <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
                             {new Date(research.publishedAt).toLocaleDateString()}
                           </div>

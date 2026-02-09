@@ -104,8 +104,8 @@ export default function ProjectsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Projects</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Projects</h1>
+            <p className="text-muted-foreground">
               Showcase your work and technical skills
             </p>
           </div>
@@ -119,11 +119,11 @@ export default function ProjectsPage() {
         {projects.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Plus className="h-12 w-12 text-gray-400" />
+              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Plus className="h-12 w-12 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No projects yet</h3>
-              <p className="text-gray-600 text-center mb-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-2">No projects yet</h3>
+              <p className="text-muted-foreground text-center mb-6 max-w-sm">
                 Start building your portfolio by adding your first project. Showcase your skills and experience.
               </p>
               <Button onClick={handleAddProject} className="flex items-center gap-2">

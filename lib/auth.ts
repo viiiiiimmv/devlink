@@ -1,29 +1,42 @@
-import { NextAuthOptions, Session, User } from 'next-auth'
-import { JWT } from 'next-auth/jwt'
+import { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
 import { db } from '@/lib/db'
-import { AdapterUser } from 'next-auth/adapters'
+import type { OAuthProvider } from '@/models/User'
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim()
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim()
+const githubClientId = process.env.GITHUB_CLIENT_ID?.trim()
+const githubClientSecret = process.env.GITHUB_CLIENT_SECRET?.trim()
+
+const hasGoogleProvider = Boolean(googleClientId && googleClientSecret)
+const hasGitHubProvider = Boolean(githubClientId && githubClientSecret)
+const isOAuthProvider = (provider: string | undefined): provider is OAuthProvider =>
+  provider === 'google' || provider === 'github'
+const normalizeEmail = (value: unknown): string =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code"
-        }
-      }
-    }),
-    // Only enable GitHub if credentials are provided
-    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET && 
-        process.env.GITHUB_CLIENT_ID !== 'your-github-client-id' ? [
+    ...(hasGoogleProvider ? [
+      GoogleProvider({
+        clientId: googleClientId!,
+        clientSecret: googleClientSecret!,
+        allowDangerousEmailAccountLinking: true,
+        authorization: {
+          params: {
+            prompt: 'consent',
+            access_type: 'offline',
+            response_type: 'code',
+          },
+        },
+      }),
+    ] : []),
+    ...(hasGitHubProvider ? [
       GitHubProvider({
-        clientId: process.env.GITHUB_CLIENT_ID,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        clientId: githubClientId!,
+        clientSecret: githubClientSecret!,
+        allowDangerousEmailAccountLinking: true,
       }),
     ] : []),
   ],
@@ -32,67 +45,105 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/signin',
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === 'google' || account?.provider === 'github') {
-        try {
-          const existingUser = await db.findUser(user.email!)
-          
-          if (!existingUser) {
-            // Create new user
-            await db.createUser({
-              email: user.email!,
-              name: user.name!,
-              image: user.image ?? undefined,
-              provider: account.provider,
-            })
-          }
-          return true
-        } catch (error) {
-          console.error('SignIn error:', error)
-          return false
-        }
+    async signIn({ user, account }) {
+      const provider = account?.provider
+      if (!isOAuthProvider(provider)) {
+        return false
       }
-      return false
+
+      const email = normalizeEmail(user.email)
+      if (!email) {
+        console.error('SignIn error: missing email from OAuth provider', { provider })
+        return false
+      }
+
+      try {
+        const dbUser = await db.upsertOAuthUser({
+          email,
+          name: user.name,
+          image: user.image,
+          provider,
+        })
+
+        return Boolean(dbUser)
+      } catch (error) {
+        console.error('SignIn error:', error)
+        return false
+      }
     },
     async jwt({ token, account, user, trigger }) {
-      if (account && user) {
-        token.id = user.id
-        // Get user from database to include username
-        const dbUser = await db.findUser(user.email!)
-        if (dbUser?.username) {
-          token.username = dbUser.username
+      try {
+        if (account && user) {
+          const normalizedEmail = normalizeEmail(user.email)
+          if (normalizedEmail) {
+            const dbUser = await db.findUser(normalizedEmail)
+            if (dbUser) {
+              token.id = dbUser._id
+              token.email = dbUser.email
+              token.name = dbUser.name
+              token.picture = dbUser.image
+              token.username = dbUser.username || null
+            } else {
+              token.email = normalizedEmail
+              if (typeof user.id === 'string') {
+                token.id = user.id
+              }
+              if (typeof user.name === 'string') {
+                token.name = user.name
+              }
+              if (typeof user.image === 'string') {
+                token.picture = user.image
+              }
+            }
+          } else if (typeof user.id === 'string') {
+            token.id = user.id
+          }
         }
-      }
-      
-      // If the session is being updated, refresh username from database
-      if (trigger === 'update' && token.email) {
-        const dbUser = await db.findUser(token.email as string)
-        if (dbUser?.username) {
-          token.username = dbUser.username
+
+        const tokenEmail = normalizeEmail(token.email)
+
+        // If the session is being updated, refresh username from database
+        // Also refresh if token is missing username but has an email.
+        if (tokenEmail && (trigger === 'update' || !token.username)) {
+          const dbUser = await db.findUser(tokenEmail)
+          if (dbUser) {
+            token.id = dbUser._id
+            token.email = dbUser.email
+            token.name = dbUser.name
+            token.picture = dbUser.image
+            token.username = dbUser.username || null
+          }
         }
+      } catch (error) {
+        console.error('JWT callback error:', error)
       }
-      
-      // Also check for username if token doesn't have it but user exists
-      if (!token.username && token.email) {
-        const dbUser = await db.findUser(token.email as string)
-        if (dbUser?.username) {
-          token.username = dbUser.username
-        }
-      }
-      
+
       return token
     },
     async session({ session, token }) {
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          id: token.id,
-          username: token.username || null,
-          email: token.email || '',
-          name: token.name || null,
-          image: token.picture || null
+      try {
+        const tokenEmail = normalizeEmail(token.email)
+
+        return {
+          ...session,
+          user: {
+            ...(session.user ?? {}),
+            id: typeof token.id === 'string' ? token.id : undefined,
+            username: typeof token.username === 'string' ? token.username : null,
+            email: tokenEmail || session.user?.email || '',
+            name:
+              typeof token.name === 'string'
+                ? token.name
+                : (session.user?.name ?? null),
+            image:
+              typeof token.picture === 'string'
+                ? token.picture
+                : (session.user?.image ?? null),
+          },
         }
+      } catch (error) {
+        console.error('Session callback error:', error)
+        return session
       }
     },
     async redirect({ url, baseUrl }) {
@@ -100,16 +151,22 @@ export const authOptions: NextAuthOptions = {
       if (url.startsWith('/')) return `${baseUrl}${url}`
       
       // Allows callback URLs on the same origin
-      if (new URL(url).origin === baseUrl) {
-        const urlObj = new URL(url)
-        const fromParam = urlObj.searchParams.get('from')
-        
-        // If there's a 'from' parameter, redirect there
-        if (fromParam && fromParam.startsWith('/')) {
-          return `${baseUrl}${fromParam}`
+      try {
+        if (new URL(url).origin === baseUrl) {
+          const urlObj = new URL(url)
+          const fromParam = urlObj.searchParams.get('from')
+          
+          // If there's a 'from' parameter, redirect there
+          if (fromParam && fromParam.startsWith('/')) {
+            return `${baseUrl}${fromParam}`
+          }
+          
+          return url
         }
-        
-        return url
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Redirect callback error:', error)
+        }
       }
       
       return baseUrl

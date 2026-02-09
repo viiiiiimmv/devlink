@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { DEFAULT_PROFILE_TEMPLATE, DEFAULT_PROFILE_THEME, DEFAULT_SECTION_SETTINGS } from '@/lib/profile-customization'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +48,9 @@ export async function POST(request: NextRequest) {
         bio: '',
         skills: [],
         socialLinks: {},
-        theme: 'modern',
+        theme: DEFAULT_PROFILE_THEME,
+        template: DEFAULT_PROFILE_TEMPLATE,
+        sectionSettings: DEFAULT_SECTION_SETTINGS,
         projects: [],
         experiences: [],
         certifications: [],

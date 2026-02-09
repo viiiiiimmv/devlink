@@ -154,7 +154,7 @@ export default function ResearchFormModal({
               placeholder="https://yourresearch.com/post-title"
               required
             />
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Link to your research papers
             </p>
           </div>

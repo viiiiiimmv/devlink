@@ -1,11 +1,14 @@
 import mongoose, { Document, Schema, Types } from 'mongoose'
 
+export type OAuthProvider = 'google' | 'github'
+
 export interface IUser extends Document {
   _id: Types.ObjectId
   email: string
   name: string
   image?: string
-  provider: string
+  provider: OAuthProvider
+  providers: OAuthProvider[]
   username: string
   createdAt: Date
   updatedAt: Date
@@ -15,6 +18,7 @@ const UserSchema = new Schema<IUser>({
   email: {
     type: String,
     required: true,
+    unique: true,
     lowercase: true,
     trim: true,
   },
@@ -32,6 +36,10 @@ const UserSchema = new Schema<IUser>({
     required: true,
     enum: ['google', 'github'],
   },
+  providers: [{
+    type: String,
+    enum: ['google', 'github'],
+  }],
   username: {
     type: String,
     sparse: true,
@@ -55,8 +63,22 @@ const UserSchema = new Schema<IUser>({
   timestamps: true,
 })
 
-// Indexes for better performance
-UserSchema.index({ email: 1 })
-// Note: username index is automatically created by sparse: true
+UserSchema.pre('validate', function (next) {
+  const providers = Array.isArray(this.providers) ? Array.from(new Set(this.providers)) : []
+
+  if (this.provider && !providers.includes(this.provider)) {
+    providers.push(this.provider)
+  }
+
+  if (!this.provider && providers.length > 0) {
+    this.provider = providers[0]
+  }
+
+  this.providers = providers
+  next()
+})
+
+// Note: `email` unique index is defined on the field itself.
+// Note: username index is automatically created by sparse: true.
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema)

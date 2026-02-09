@@ -97,7 +97,7 @@ export default function Setup() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -110,7 +110,7 @@ export default function Setup() {
               <User className="h-10 w-10 text-blue-600" />
             </div>
             <CardTitle className="text-2xl font-bold">Choose Your Username</CardTitle>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Choose a username that starts with a letter and contains only lowercase letters and numbers
             </p>
           </CardHeader>
@@ -141,10 +141,10 @@ export default function Setup() {
 
               {username && (
                 <div className="text-sm space-y-1">
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     Your portfolio will be available at:
                   </p>
-                  <p className="font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  <p className="font-mono text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 px-2 py-1 rounded">
                     devlink.vercel.app/{username}
                   </p>
                   {isAvailable === false && (
@@ -160,7 +160,7 @@ export default function Setup() {
                 </div>
               )}
 
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-muted-foreground">
                 <p>• Must start with a letter</p>
                 <p>• Must contain at least one letter</p>
                 <p>• Only lowercase letters and numbers allowed</p>
@@ -184,7 +184,7 @@ export default function Setup() {
               )}
             </Button>
 
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-muted-foreground">
               <p>You can change this later in your dashboard</p>
             </div>
           </CardContent>

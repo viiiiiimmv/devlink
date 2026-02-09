@@ -5,134 +5,19 @@ import type { Profile } from '@/components/public-profile/profile'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Save, Palette, Moon, Sun, Monitor, Trash2, AlertTriangle, X, Check } from 'lucide-react'
-import PortfolioMockPreview from '@/components/PortfolioMockPreview'
-import PortfolioLivePreview from '@/components/PortfolioLivePreview'
-import { useCallback } from 'react'
+import { Save, Trash2, AlertTriangle, X, Check, Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import DashboardLayout from '@/components/dashboard/layout'
 import toast from 'react-hot-toast'
-
-const themes = [
-  {
-    id: 'modern',
-    name: 'Modern',
-    description: 'Clean and professional design with modern elements',
-    preview: 'bg-gradient-to-br from-blue-500 to-cyan-500'
-  },
-  {
-    id: 'dark',
-    name: 'Dark',
-    description: 'Sleek dark theme perfect for developers',
-    preview: 'bg-gradient-to-br from-gray-800 to-gray-900'
-  },
-  {
-    id: 'gradient',
-    name: 'Gradient',
-    description: 'Vibrant gradient design with bold colors',
-    preview: 'bg-gradient-to-br from-purple-500 to-pink-500'
-  },
-  {
-    id: 'minimal',
-    name: 'Minimal',
-    description: 'Simple and clean design focused on content',
-    preview: 'bg-gradient-to-br from-gray-400 to-gray-600'
-  },
-  {
-    id: 'ocean',
-    name: 'Ocean',
-    description: 'Deep blue ocean-inspired theme with calm vibes',
-    preview: 'bg-gradient-to-br from-blue-600 to-teal-600'
-  },
-  {
-    id: 'sunset',
-    name: 'Sunset',
-    description: 'Warm orange and red gradient like a beautiful sunset',
-    preview: 'bg-gradient-to-br from-orange-500 to-red-500'
-  },
-  {
-    id: 'forest',
-    name: 'Forest',
-    description: 'Nature-inspired green theme for eco-conscious developers',
-    preview: 'bg-gradient-to-br from-green-600 to-emerald-600'
-  },
-  {
-    id: 'midnight',
-    name: 'Midnight',
-    description: 'Deep purple and blue for night owls',
-    preview: 'bg-gradient-to-br from-indigo-800 to-purple-900'
-  },
-  {
-    id: 'coral',
-    name: 'Coral',
-    description: 'Vibrant coral and pink for creative developers',
-    preview: 'bg-gradient-to-br from-pink-400 to-rose-500'
-  },
-  {
-    id: 'steel',
-    name: 'Steel',
-    description: 'Industrial gray and silver for technical portfolios',
-    preview: 'bg-gradient-to-br from-slate-600 to-gray-700'
-  },
-  {
-    id: 'aurora',
-    name: 'Aurora',
-    description: 'Northern lights inspired with green and blue',
-    preview: 'bg-gradient-to-br from-emerald-400 to-cyan-500'
-  },
-  {
-    id: 'fire',
-    name: 'Fire',
-    description: 'Hot red and orange for passionate developers',
-    preview: 'bg-gradient-to-br from-red-600 to-orange-600'
-  },
-  {
-    id: 'lavender',
-    name: 'Lavender',
-    description: 'Soft purple theme for elegant portfolios',
-    preview: 'bg-gradient-to-br from-purple-400 to-violet-500'
-  },
-  {
-    id: 'sapphire',
-    name: 'Sapphire',
-    description: 'Rich blue theme for professional developers',
-    preview: 'bg-gradient-to-br from-blue-700 to-indigo-700'
-  },
-  {
-    id: 'amber',
-    name: 'Amber',
-    description: 'Golden amber theme for experienced developers',
-    preview: 'bg-gradient-to-br from-amber-500 to-yellow-500'
-  }
-]
 
 export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession()
   const router = useRouter()
-  const [selectedTheme, setSelectedTheme] = useState('modern')
   const [username, setUsername] = useState('')
-  // Fallback mock profile for preview if profileData is incomplete
-  const emptyProfile: Profile = {
-    username: '',
-    name: '',
-    bio: '',
-    skills: [],
-    profileImage: '',
-    profilePhoto: {},
-    socialLinks: {},
-    theme: selectedTheme,
-    projects: [],
-    experiences: [],
-    certifications: [],
-    researches: []
-  }
   const [profileData, setProfileData] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [updatingUsername, setUpdatingUsername] = useState(false)
@@ -184,7 +69,6 @@ export default function SettingsPage() {
       const response = await fetch('/api/profile')
       if (response.ok) {
         const data = await response.json()
-        setSelectedTheme(data.theme || 'modern')
         setUsername(data.username || '')
         setProfileData(data)
       }
@@ -192,28 +76,6 @@ export default function SettingsPage() {
       console.error('Error fetching settings:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSaveTheme = async () => {
-    setSaving(true)
-    try {
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme: selectedTheme })
-      })
-
-      if (response.ok) {
-        toast.success('Theme updated successfully!')
-      } else {
-        toast.error('Failed to update theme')
-      }
-    } catch (error) {
-      console.error('Error updating theme:', error)
-      toast.error('Failed to update theme')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -273,7 +135,8 @@ export default function SettingsPage() {
           profileImage: prev?.profileImage ?? '',
           profilePhoto: prev?.profilePhoto ?? {},
           socialLinks: prev?.socialLinks ?? {},
-          theme: prev?.theme ?? selectedTheme,
+          theme: prev?.theme ?? 'modern',
+          template: prev?.template ?? 'editorial',
           projects: prev?.projects ?? [],
           experiences: prev?.experiences ?? [],
           certifications: prev?.certifications ?? [],
@@ -349,71 +212,14 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
-            <p className="text-gray-600">
-              Customize your portfolio appearance and account settings
+            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+            <p className="text-muted-foreground">
+              Manage your account settings and critical portfolio actions
             </p>
           </div>
         </div>
 
-        {/* Theme Palette in 5 columns x 3 rows */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-6 w-6 text-blue-600" />
-              Portfolio Theme
-            </CardTitle>
-            <CardDescription>
-              Instantly preview your portfolio as you select a theme
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup value={selectedTheme} onValueChange={setSelectedTheme} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {themes.map((theme) => (
-                <label key={theme.id} className={`cursor-pointer group block rounded-lg border-2 p-3 transition-all duration-150 ${selectedTheme === theme.id ? 'border-blue-500 shadow-lg' : 'border-gray-800 hover:border-blue-300'}`}
-                  htmlFor={theme.id}
-                >
-                  <div className={`w-full h-16 rounded-lg mb-2 ${theme.preview} transition-all duration-150`} />
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600">{theme.name}</span>
-                    <RadioGroupItem value={theme.id} id={theme.id} className="ml-2" />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{theme.description}</p>
-                </label>
-              ))}
-            </RadioGroup>
-            <Button
-              onClick={handleSaveTheme}
-              disabled={saving}
-              className="w-full flex items-center gap-2 mt-6 dark:text-white"
-            >
-              {saving ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save Theme
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Portfolio Preview directly below theme options */}
-        <Card className="mt-8 w-full">
-          <CardHeader>
-            <CardTitle>Portfolio Preview</CardTitle>
-            <CardDescription>
-              See your portfolio update in real-time as you change the theme
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="w-full h-[70vh] overflow-y-auto bg-gray-100 rounded-lg border border-gray-200">
-              <PortfolioLivePreview profile={profileData ?? emptyProfile} themeId={selectedTheme} />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Account Settings & Danger Zone below preview */}
-        <div className="space-y-6 mt-8">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Portfolio URL</CardTitle>
@@ -424,7 +230,7 @@ export default function SettingsPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <span className="text-gray-600">devlink.vercel.app/</span>
+                  <span className="text-muted-foreground">devlink.vercel.app/</span>
                   <div className="flex-1 relative">
                     <Input
                       value={username}
@@ -457,15 +263,15 @@ export default function SettingsPage() {
                   </Button>
                 </div>
                 <div className="text-sm">
-                  <p className="text-gray-600 mb-2">
+                  <p className="text-muted-foreground mb-2">
                     Choose a unique username for your portfolio. Username must start with a letter and contain only lowercase letters and numbers.
                   </p>
                   {username && username !== profileData?.username && (
                     <div className="space-y-2">
-                      <p className="text-gray-600">
+                      <p className="text-muted-foreground">
                         New portfolio URL will be:
                       </p>
-                      <p className="font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      <p className="font-mono text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 px-2 py-1 rounded">
                         devlink.vercel.app/{username}
                       </p>
                       {usernameAvailable === true && (
@@ -478,13 +284,36 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                <div className="text-xs text-gray-500 mt-2">
+                <div className="text-xs text-muted-foreground mt-2">
                   <p>• Must start with a letter</p>
                   <p>• Must contain at least one letter</p>
                   <p>• Only lowercase letters and numbers allowed</p>
                   <p>• No symbols or special characters</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Resume Export
+              </CardTitle>
+              <CardDescription>
+                Download your current portfolio data as a resume PDF.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm text-muted-foreground">
+                The exported PDF includes your profile summary, skills, projects, experience, certifications, and research.
+              </p>
+              <Button asChild>
+                <a href="/api/profile/resume" target="_blank" rel="noopener noreferrer">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
+                </a>
+              </Button>
             </CardContent>
           </Card>
 
@@ -527,18 +356,18 @@ export default function SettingsPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-lg p-6 max-w-md w-full"
+            className="bg-card rounded-lg p-6 max-w-md w-full border border-border"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-red-700">Delete Portfolio</h3>
+              <h3 className="text-lg font-semibold text-red-700 dark:text-red-300">Delete Portfolio</h3>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -546,20 +375,20 @@ export default function SettingsPage() {
 
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-300" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">This action cannot be undone</p>
-                  <p className="text-sm text-gray-600">This will permanently delete your account and all data.</p>
+                  <p className="font-medium text-foreground">This action cannot be undone</p>
+                  <p className="text-sm text-muted-foreground">This will permanently delete your account and all data.</p>
                 </div>
               </div>
 
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-800">
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <p className="text-sm text-red-800 dark:text-red-200">
                   <strong>What will be deleted:</strong>
                 </p>
-                <ul className="text-sm text-red-700 mt-2 space-y-1">
+                <ul className="text-sm text-red-700 dark:text-red-300 mt-2 space-y-1">
                   <li>• Your profile and portfolio</li>
                   <li>• All projects, experiences, and certifications</li>
                   <li>• Your account and authentication data</li>
@@ -597,28 +426,28 @@ export default function SettingsPage() {
 
       {/* Username Update Confirmation Modal */}
       {showUsernameConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-lg p-6 max-w-md w-full"
+            className="bg-card rounded-lg p-6 max-w-md w-full border border-border"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-blue-700">Confirm Username Change</h3>
+              <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">Confirm Username Change</h3>
               <button
                 onClick={() => setShowUsernameConfirm(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="mb-6">
-              <p className="text-gray-900">
+              <p className="text-foreground">
                 Are you sure you want to change your username from <strong>{profileData?.username}</strong> to <strong>{newUsername}</strong>?
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 This will update your portfolio URL and cannot be undone immediately.
               </p>
             </div>

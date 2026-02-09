@@ -12,6 +12,7 @@ import {
   Award, 
   BookOpen, 
   Settings,
+  Palette,
   LogOut,
   Menu,
   X,
@@ -41,6 +42,7 @@ const navigation = [
   { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
   { name: 'Certifications', href: '/dashboard/certifications', icon: Award },
   { name: 'Research Papers', href: '/dashboard/researches', icon: BookOpen },
+  { name: 'Customise', href: '/dashboard/customise', icon: Palette },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
@@ -48,10 +50,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false)
+  const [isDesktopHovering, setIsDesktopHovering] = useState(false)
   const username = (session?.user as { username?: string | null } | undefined)?.username
+  const userImage =
+    typeof session?.user?.image === 'string' && session.user.image.trim().length > 0
+      ? session.user.image
+      : undefined
+  const isDesktopExpanded = !isDesktopCollapsed || isDesktopHovering
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
+  }
+
+  const handleDesktopLogoClick = () => {
+    setIsDesktopCollapsed((current) => !current)
+    setIsDesktopHovering(false)
   }
 
   return (
@@ -59,7 +73,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Mobile sidebar */}
       <div className={`lg:hidden fixed inset-0 z-50 ${sidebarOpen ? '' : 'pointer-events-none'}`}>
         <div 
-          className={`fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity ${
+          className={`fixed inset-0 bg-black/60 transition-opacity ${
             sidebarOpen ? 'opacity-100' : 'opacity-0'
           }`}
           onClick={() => setSidebarOpen(false)}
@@ -98,23 +112,58 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-card shadow-sm border-r border-border">
-          <div className="flex items-center h-16 px-6 border-b border-border">
-            <Code className="h-8 w-8 text-blue-600" />
-            <span className="ml-2 text-xl font-bold text-foreground">DevLink</span>
+      {isDesktopCollapsed && !isDesktopHovering ? (
+        <div
+          className="hidden lg:block fixed inset-y-0 left-0 z-20 w-3"
+          onMouseEnter={() => setIsDesktopHovering(true)}
+          aria-hidden
+        />
+      ) : null}
+
+      <div
+        className={`hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:flex-col transition-[width] duration-200 ${
+          isDesktopExpanded ? 'lg:w-64' : 'lg:w-16'
+        }`}
+        onMouseEnter={() => {
+          if (isDesktopCollapsed) setIsDesktopHovering(true)
+        }}
+        onMouseLeave={() => {
+          if (isDesktopCollapsed) setIsDesktopHovering(false)
+        }}
+      >
+        <div className="flex flex-col flex-grow bg-card shadow-sm border-r border-border overflow-hidden">
+          <button
+            type="button"
+            onClick={handleDesktopLogoClick}
+            className={`flex items-center h-16 border-b border-border transition-[padding] duration-200 hover:bg-muted/40 ${
+              isDesktopExpanded ? 'px-6 justify-start' : 'px-0 justify-center'
+            }`}
+            aria-label={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <Code className="h-8 w-8 text-blue-600 shrink-0" />
+            {isDesktopExpanded ? (
+              <span className="ml-2 text-xl font-bold text-foreground whitespace-nowrap">DevLink</span>
+            ) : null}
+          </button>
+          <div className="sr-only" aria-live="polite">
+            {isDesktopCollapsed ? 'Sidebar collapsed' : 'Sidebar expanded'}
           </div>
           
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className={`flex-1 py-6 space-y-2 transition-[padding] duration-200 ${isDesktopExpanded ? 'px-4' : 'px-2'}`}>
             {navigation.map((item) => (
               <Link key={item.name} href={item.href}>
-                <div className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                <div className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
+                  isDesktopExpanded ? 'px-3 py-2 justify-start' : 'px-0 py-2 justify-center'
+                } ${
                   pathname === item.href
                     ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}>
-                  <item.icon className="h-5 w-5 mr-3" />
-                  {item.name}
+                  <item.icon className={`h-5 w-5 shrink-0 ${isDesktopExpanded ? 'mr-3' : ''}`} />
+                  {isDesktopExpanded ? (
+                    <span className="whitespace-nowrap">{item.name}</span>
+                  ) : null}
                 </div>
               </Link>
             ))}
@@ -123,7 +172,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={`transition-[padding] duration-200 ${isDesktopCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
         {/* Top bar */}
         <div className="sticky top-0 z-10 flex h-16 bg-card shadow-sm border-b border-border">
           <button
@@ -153,7 +202,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={session?.user?.image || ''} />
+                      <AvatarImage src={userImage} />
                       <AvatarFallback>
                         {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </AvatarFallback>
@@ -174,6 +223,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <Link href="/dashboard/profile">
                       <User className="mr-2 h-4 w-4" />
                       Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/customise">
+                      <Palette className="mr-2 h-4 w-4" />
+                      Customise
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

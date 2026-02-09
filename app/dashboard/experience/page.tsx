@@ -129,8 +129,8 @@ export default function ExperiencePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Experience</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Experience</h1>
+            <p className="text-muted-foreground">
               Showcase your professional journey and achievements
             </p>
           </div>
@@ -144,11 +144,11 @@ export default function ExperiencePage() {
         {experiences.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Briefcase className="h-12 w-12 text-gray-400" />
+              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Briefcase className="h-12 w-12 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No experience added yet</h3>
-              <p className="text-gray-600 text-center mb-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-2">No experience added yet</h3>
+              <p className="text-muted-foreground text-center mb-6 max-w-sm">
                 Add your work experience to showcase your professional journey and skills.
               </p>
               <Button onClick={handleAddExperience} className="flex items-center gap-2">
@@ -170,15 +170,15 @@ export default function ExperiencePage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Briefcase className="h-6 w-6 text-blue-600" />
+                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Briefcase className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                         </div>
                         <div className="flex-1">
                           <CardTitle className="text-xl">{experience.position}</CardTitle>
-                          <CardDescription className="text-lg font-medium text-gray-700 mt-1">
+                          <CardDescription className="text-lg font-medium text-foreground/80 mt-1">
                             {experience.company}
                           </CardDescription>
-                          <div className="flex items-center gap-1 mt-2 text-sm text-gray-600">
+                          <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
                             {formatExperienceDuration(experience.startDate, experience.endDate, experience.isCurrentlyWorking)}
                           </div>
@@ -203,7 +203,7 @@ export default function ExperiencePage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-700 mb-4">
+                    <p className="text-foreground/90 mb-4">
                       {experience.description}
                     </p>
 

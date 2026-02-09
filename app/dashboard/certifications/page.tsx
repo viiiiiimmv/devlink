@@ -102,8 +102,8 @@ export default function CertificationsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Certifications</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Certifications</h1>
+            <p className="text-muted-foreground">
               Showcase your professional achievements and credentials
             </p>
           </div>
@@ -117,11 +117,11 @@ export default function CertificationsPage() {
         {certifications.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Award className="h-12 w-12 text-gray-400" />
+              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Award className="h-12 w-12 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No certifications added yet</h3>
-              <p className="text-gray-600 text-center mb-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-foreground mb-2">No certifications added yet</h3>
+              <p className="text-muted-foreground text-center mb-6 max-w-sm">
                 Add your professional certifications to showcase your expertise and achievements.
               </p>
               <Button onClick={handleAddCertification} className="flex items-center gap-2">
@@ -143,8 +143,8 @@ export default function CertificationsPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Award className="h-6 w-6 text-purple-600" />
+                        <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Award className="h-6 w-6 text-purple-600 dark:text-purple-300" />
                         </div>
                         <div className="flex-1">
                           <CardTitle className="text-lg leading-tight">
@@ -175,7 +175,7 @@ export default function CertificationsPage() {
                   </CardHeader>
                   <CardContent>
                     {/* Date */}
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
                       <Calendar className="h-4 w-4" />
                       {certification.date}
                     </div>

@@ -6,9 +6,10 @@ import type { Profile } from '@/components/public-profile/profile';
 interface PortfolioLivePreviewProps {
   profile: Profile | null;
   themeId: string;
+  templateId?: string;
 }
 
-export default function PortfolioLivePreview({ profile, themeId }: PortfolioLivePreviewProps) {
+export default function PortfolioLivePreview({ profile, themeId, templateId }: PortfolioLivePreviewProps) {
   if (!profile) {
     return (
       <div className="flex items-center justify-center h-full w-full">
@@ -16,7 +17,7 @@ export default function PortfolioLivePreview({ profile, themeId }: PortfolioLive
       </div>
     );
   }
-  // Override theme for preview
-  const previewProfile = { ...profile, theme: themeId };
-  return <PublicProfile profile={previewProfile} />;
+  // Override selected customisation for preview
+  const previewProfile = { ...profile, theme: themeId, template: templateId ?? profile.template };
+  return <PublicProfile profile={previewProfile} showSharePanel={false} />;
 }

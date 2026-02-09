@@ -105,7 +105,7 @@ export default function MonthYearPicker({
       <div className="grid grid-cols-2 gap-2">
         {/* Month Selector */}
         <div>
-          <Label htmlFor="month-select" className="text-xs text-gray-500">
+          <Label htmlFor="month-select" className="text-xs text-muted-foreground">
             Month
           </Label>
           <Select 
@@ -128,7 +128,7 @@ export default function MonthYearPicker({
 
         {/* Year Selector */}
         <div>
-          <Label htmlFor="year-select" className="text-xs text-gray-500">
+          <Label htmlFor="year-select" className="text-xs text-muted-foreground">
             Year
           </Label>
           <Select 
@@ -151,7 +151,7 @@ export default function MonthYearPicker({
       </div>
 
       {!selectedMonth && !selectedYear && placeholder && (
-        <p className="text-xs text-gray-500">{placeholder}</p>
+        <p className="text-xs text-muted-foreground">{placeholder}</p>
       )}
     </div>
   )

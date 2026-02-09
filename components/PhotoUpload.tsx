@@ -103,7 +103,7 @@ export default function PhotoUpload({ currentPhoto, onPhotoChange, className = '
       <div className="flex items-center justify-center">
         <div className="relative">
           {/* Photo Preview */}
-          <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100">
+          <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-border bg-muted">
             {preview ? (
               <Image
                 src={preview}
@@ -112,14 +112,14 @@ export default function PhotoUpload({ currentPhoto, onPhotoChange, className = '
                 className="object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 <User size={48} />
               </div>
             )}
 
             {/* Loading Overlay */}
             {uploading && (
-              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <div className="text-white text-sm">Uploading...</div>
               </div>
             )}
@@ -154,16 +154,16 @@ export default function PhotoUpload({ currentPhoto, onPhotoChange, className = '
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${dragOver
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+            : 'border-border hover:border-blue-400'
           }`}
         onClick={() => fileInputRef.current?.click()}
       >
-        <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-        <p className="text-sm text-gray-600">
+        <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground">
           {dragOver ? 'Drop your photo here' : 'Click to upload or drag and drop'}
         </p>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           PNG, JPG, GIF up to 5MB
         </p>
       </div>

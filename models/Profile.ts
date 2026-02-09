@@ -1,4 +1,12 @@
 import mongoose, { Document, Schema, Types } from 'mongoose'
+import {
+  DEFAULT_SECTION_SETTINGS,
+  DEFAULT_PROFILE_TEMPLATE,
+  DEFAULT_PROFILE_THEME,
+  VALID_SECTION_IDS,
+  VALID_TEMPLATE_IDS,
+  VALID_THEME_IDS,
+} from '@/lib/profile-customization'
 
 export interface IProject {
   id: string
@@ -52,6 +60,26 @@ export interface IProfilePhoto {
   publicId?: string
 }
 
+export interface IProfileSectionSetting {
+  id: string
+  visible: boolean
+}
+
+export interface ICustomTheme {
+  enabled: boolean
+  primary: string
+  secondary: string
+}
+
+export interface IContactCta {
+  enabled: boolean
+  title: string
+  description: string
+  buttonLabel: string
+  link?: string
+  email?: string
+}
+
 export interface IProfile extends Document {
   _id: Types.ObjectId
   userId: string
@@ -63,6 +91,11 @@ export interface IProfile extends Document {
   profilePhoto?: IProfilePhoto
   socialLinks: ISocialLinks
   theme: string
+  template: string
+  isPublished: boolean
+  customTheme: ICustomTheme
+  contactCta: IContactCta
+  sectionSettings: IProfileSectionSetting[]
   projects: IProject[]
   experiences: IExperience[]
   certifications: ICertification[]
@@ -116,6 +149,72 @@ const SocialLinksSchema = new Schema({
   linkedin: { type: String, trim: true },
   twitter: { type: String, trim: true },
   website: { type: String, trim: true },
+}, { _id: false })
+
+const SectionSettingSchema = new Schema({
+  id: {
+    type: String,
+    enum: VALID_SECTION_IDS,
+    required: true,
+  },
+  visible: {
+    type: Boolean,
+    default: true,
+  },
+}, { _id: false })
+
+const CustomThemeSchema = new Schema({
+  enabled: {
+    type: Boolean,
+    default: false,
+  },
+  primary: {
+    type: String,
+    trim: true,
+    match: /^#([0-9a-fA-F]{6})$/,
+    default: '#2563eb',
+  },
+  secondary: {
+    type: String,
+    trim: true,
+    match: /^#([0-9a-fA-F]{6})$/,
+    default: '#14b8a6',
+  },
+}, { _id: false })
+
+const ContactCtaSchema = new Schema({
+  enabled: {
+    type: Boolean,
+    default: true,
+  },
+  title: {
+    type: String,
+    trim: true,
+    default: 'Let us work together',
+    maxlength: 120,
+  },
+  description: {
+    type: String,
+    trim: true,
+    default: 'Open to freelance, full-time roles, and collaboration opportunities.',
+    maxlength: 240,
+  },
+  buttonLabel: {
+    type: String,
+    trim: true,
+    default: 'Contact me',
+    maxlength: 40,
+  },
+  link: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  email: {
+    type: String,
+    trim: true,
+    default: '',
+  },
 }, { _id: false })
 
 const ProfileSchema = new Schema<IProfile>({
@@ -172,8 +271,40 @@ const ProfileSchema = new Schema<IProfile>({
   },
   theme: {
     type: String,
-    default: 'modern',
-    enum: ['modern', 'dark', 'gradient', 'minimal', 'ocean', 'sunset', 'forest', 'midnight', 'coral', 'steel', 'aurora', 'fire', 'lavender', 'sapphire', 'amber'],
+    default: DEFAULT_PROFILE_THEME,
+    enum: VALID_THEME_IDS,
+  },
+  template: {
+    type: String,
+    default: DEFAULT_PROFILE_TEMPLATE,
+    enum: VALID_TEMPLATE_IDS,
+  },
+  isPublished: {
+    type: Boolean,
+    default: true,
+  },
+  customTheme: {
+    type: CustomThemeSchema,
+    default: () => ({
+      enabled: false,
+      primary: '#2563eb',
+      secondary: '#14b8a6',
+    }),
+  },
+  contactCta: {
+    type: ContactCtaSchema,
+    default: () => ({
+      enabled: true,
+      title: 'Let us work together',
+      description: 'Open to freelance, full-time roles, and collaboration opportunities.',
+      buttonLabel: 'Contact me',
+      link: '',
+      email: '',
+    }),
+  },
+  sectionSettings: {
+    type: [SectionSettingSchema],
+    default: DEFAULT_SECTION_SETTINGS,
   },
   projects: [ProjectSchema],
   experiences: [ExperienceSchema],
@@ -186,6 +317,7 @@ const ProfileSchema = new Schema<IProfile>({
 // Indexes for better performance
 ProfileSchema.index({ userId: 1 })
 ProfileSchema.index({ username: 1 })
+ProfileSchema.index({ isPublished: 1 })
 
 // Clear the model cache to ensure schema changes are picked up
 if (mongoose.models.Profile) {

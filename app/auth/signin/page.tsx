@@ -1,17 +1,44 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { signIn, getSession } from 'next-auth/react'
+import { signIn, getProviders } from 'next-auth/react'
+import type { ClientSafeProvider } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Github, Chrome, Code, ArrowLeft, AlertCircle } from 'lucide-react'
+import { Github, Chrome, Code, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
+type SupportedProviderId = 'google' | 'github'
+
+const providerConfig: Record<
+  SupportedProviderId,
+  {
+    label: string
+    className: string
+    Icon: typeof Chrome
+  }
+> = {
+  google: {
+    label: 'Continue with Google',
+    className: 'w-full bg-red-600 hover:bg-red-700 text-white',
+    Icon: Chrome,
+  },
+  github: {
+    label: 'Continue with GitHub',
+    className: 'w-full bg-gray-900 hover:bg-gray-800 text-white',
+    Icon: Github,
+  },
+}
+
+const providerOrder: SupportedProviderId[] = ['google', 'github']
+
 function SignInContent() {
   const [loading, setLoading] = useState<string | null>(null)
+  const [providers, setProviders] = useState<Record<string, ClientSafeProvider>>({})
+  const [providersLoading, setProvidersLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
@@ -40,6 +67,33 @@ function SignInContent() {
     }
   }, [error])
 
+  useEffect(() => {
+    let active = true
+
+    const loadProviders = async () => {
+      try {
+        const providerMap = await getProviders()
+        if (active && providerMap) {
+          setProviders(providerMap)
+        }
+      } catch (providerError) {
+        console.error('Failed to load auth providers:', providerError)
+      } finally {
+        if (active) {
+          setProvidersLoading(false)
+        }
+      }
+    }
+
+    loadProviders()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const enabledProviderIds = providerOrder.filter((providerId) => Boolean(providers[providerId]))
+
   const handleSignIn = async (provider: string) => {
     setLoading(provider)
     try {
@@ -64,7 +118,7 @@ function SignInContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-background to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -82,37 +136,35 @@ function SignInContent() {
           </CardHeader>
           
           <CardContent className="space-y-4">
-            <Button
-              onClick={() => handleSignIn('google')}
-              disabled={loading !== null}
-              className="w-full bg-red-600 hover:bg-red-700 text-white"
-              size="lg"
-            >
-              {loading === 'google' ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-              ) : (
-                <Chrome className="h-5 w-5 mr-2" />
-              )}
-              Continue with Google
-            </Button>
+            {enabledProviderIds.map((providerId) => {
+              const config = providerConfig[providerId]
+              const Icon = config.Icon
 
-            {process.env.NEXT_PUBLIC_GITHUB_ENABLED && (
-              <Button
-                onClick={() => handleSignIn('github')}
-                disabled={loading !== null}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white"
-                size="lg"
-              >
-                {loading === 'github' ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                ) : (
-                  <Github className="h-5 w-5 mr-2" />
-                )}
-                Continue with GitHub
-              </Button>
+              return (
+                <Button
+                  key={providerId}
+                  onClick={() => handleSignIn(providerId)}
+                  disabled={loading !== null || providersLoading}
+                  className={config.className}
+                  size="lg"
+                >
+                  {loading === providerId ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <Icon className="h-5 w-5 mr-2" />
+                  )}
+                  {config.label}
+                </Button>
+              )
+            })}
+
+            {!providersLoading && enabledProviderIds.length === 0 && (
+              <p className="text-sm text-destructive text-center">
+                No authentication providers are configured. Please set OAuth credentials in `.env`.
+              </p>
             )}
 
-            <div className="text-center text-sm text-gray-600 pt-4">
+            <div className="text-center text-sm text-muted-foreground pt-4">
               <p>
                 By signing in, you agree to our Terms of Service and Privacy Policy
               </p>
@@ -120,7 +172,7 @@ function SignInContent() {
 
             <div className="text-center pt-4">
               <Link href="/">
-                <Button variant="ghost" className="text-gray-600 hover:text-gray-900">
+                <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Home
                 </Button>

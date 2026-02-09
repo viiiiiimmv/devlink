@@ -4,23 +4,42 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, Settings, Eye, ExternalLink, BarChart3 } from 'lucide-react'
+import { Plus, Settings, Eye, ExternalLink, BarChart3, Palette, CircleDashed, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/layout'
+import { calculateProfileCompletion } from '@/lib/profile-completion'
 
 interface Profile {
   username: string
   name: string
   bio: string
   skills: string[]
+  profileImage?: string
+  profilePhoto?: {
+    url?: string
+    publicId?: string
+  }
+  socialLinks: {
+    github?: string
+    linkedin?: string
+    twitter?: string
+    website?: string
+  }
   projects: any[]
   experiences: any[]
   certifications: any[]
   researches: any[]
   theme: string
+  template?: string
+  isPublished?: boolean
+  sectionSettings?: Array<{
+    id: string
+    visible: boolean
+  }>
 }
 
 export default function Dashboard() {
@@ -82,6 +101,10 @@ export default function Dashboard() {
     { label: 'Research Papers', value: profile.researches.length, color: 'bg-orange-500' },
   ] : []
 
+  const completion = profile ? calculateProfileCompletion(profile) : null
+  const pendingSteps = completion?.steps.filter((step) => !step.completed) ?? []
+  const isPublished = profile?.isPublished !== false
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -136,6 +159,62 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {completion && (
+          <Card>
+            <CardHeader className="space-y-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle className="text-xl">Profile Completion</CardTitle>
+                  <CardDescription>
+                    Guided setup to make your portfolio stronger and easier to discover.
+                  </CardDescription>
+                </div>
+                <Badge variant={completion.percentage >= 100 ? 'default' : 'secondary'}>
+                  {completion.percentage}% complete
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>{completion.completedSteps} of {completion.totalSteps} steps done</span>
+                  <span>{completion.earnedPoints}/{completion.totalPoints} points</span>
+                </div>
+                <Progress value={completion.percentage} />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingSteps.length > 0 ? (
+                pendingSteps.slice(0, 4).map((step) => (
+                  <div
+                    key={step.id}
+                    className="flex flex-col gap-3 rounded-lg border border-border p-4 md:flex-row md:items-center md:justify-between"
+                  >
+                    <div className="flex items-start gap-3">
+                      <CircleDashed className="mt-0.5 h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="font-medium text-foreground">{step.title}</p>
+                        <p className="text-sm text-muted-foreground">{step.description}</p>
+                      </div>
+                    </div>
+                    <Link href={step.href}>
+                      <Button variant="outline" size="sm">Complete Step</Button>
+                    </Link>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-start gap-3 rounded-lg border border-emerald-300/60 bg-emerald-50/40 p-4 dark:border-emerald-800 dark:bg-emerald-950/25">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-600" />
+                  <div>
+                    <p className="font-medium text-foreground">Portfolio setup complete</p>
+                    <p className="text-sm text-muted-foreground">
+                      Your profile is fully optimized. Keep it fresh by adding new projects regularly.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Link href="/dashboard/projects">
@@ -180,15 +259,15 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          <Link href="/dashboard/settings">
+          <Link href="/dashboard/customise">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Settings className="h-5 w-5 text-gray-600" />
-                  Customize Theme
+                  <Palette className="h-5 w-5 text-indigo-600" />
+                  Customise Portfolio
                 </CardTitle>
                 <CardDescription>
-                  Change your portfolio look
+                  Change template and theme
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -198,13 +277,20 @@ export default function Dashboard() {
         {/* Portfolio Preview */}
         <Card>
           <CardHeader>
-            <CardTitle>Portfolio Status</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Portfolio Status
+              {!isPublished ? (
+                <Badge variant="secondary" className="h-5 px-2 text-[10px] uppercase tracking-[0.12em] text-amber-700 dark:text-amber-300">
+                  Draft
+                </Badge>
+              ) : null}
+            </CardTitle>
             <CardDescription>
-              Your portfolio is live at{' '}
+              {isPublished ? 'Your portfolio is live at ' : 'Your draft portfolio URL is '}
               <Link
                 href={`/${profile?.username}`}
                 target="_blank"
-                className="text-blue-600 hover:underline font-medium"
+                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
                 devlink.vercel.app/{profile?.username}
               </Link>
@@ -214,10 +300,11 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-gray-900">Live</span>
+                  <div className={`w-3 h-3 rounded-full ${isPublished ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+                  <span className="text-sm font-medium text-foreground">{isPublished ? 'Live' : 'Draft'}</span>
                 </div>
                 <Badge variant="secondary">{profile?.theme} theme</Badge>
+                <Badge variant="secondary">{profile?.template || 'editorial'} template</Badge>
               </div>
               <Link href={`/${profile?.username}`} target="_blank">
                 <Button variant="outline" size="sm">

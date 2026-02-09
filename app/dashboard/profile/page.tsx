@@ -1,18 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Save, User, Link as LinkIcon, Upload, X } from 'lucide-react'
+import { MessageSquare, Save, User, Link as LinkIcon, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import DashboardLayout from '@/components/dashboard/layout'
 import PhotoUpload from '@/components/PhotoUpload'
 import toast from 'react-hot-toast'
+import { POPULAR_TECH_SKILLS } from '@/lib/popular-tech-skills'
 
 interface ProfileData {
   name: string
@@ -28,23 +29,66 @@ interface ProfileData {
     twitter?: string
     website?: string
   }
+  contactCta: {
+    enabled: boolean
+    title: string
+    description: string
+    buttonLabel: string
+    link?: string
+    email?: string
+  }
 }
 
 export default function ProfilePage() {
-  const { data: session } = useSession()
   const [profile, setProfile] = useState<ProfileData>({
     name: '',
     bio: '',
     skills: [],
-    socialLinks: {}
+    socialLinks: {},
+    contactCta: {
+      enabled: true,
+      title: 'Let us work together',
+      description: 'Open to freelance, full-time roles, and collaboration opportunities.',
+      buttonLabel: 'Contact me',
+      link: '',
+      email: '',
+    },
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [newSkill, setNewSkill] = useState('')
+  const [draggedSkillIndex, setDraggedSkillIndex] = useState<number | null>(null)
 
   useEffect(() => {
     fetchProfile()
   }, [])
+
+  const normalizeSkill = (value: string) => value.trim().toLowerCase()
+  const existingSkillSet = useMemo(
+    () => new Set(profile.skills.map((skill) => normalizeSkill(skill))),
+    [profile.skills]
+  )
+  const isDuplicateSkill = existingSkillSet.has(normalizeSkill(newSkill))
+  const suggestedSkills = useMemo(() => {
+    const query = normalizeSkill(newSkill)
+    const availableSkills = POPULAR_TECH_SKILLS.filter(
+      (skill) => !existingSkillSet.has(normalizeSkill(skill))
+    )
+
+    if (!query) {
+      return availableSkills.slice(0, 14)
+    }
+
+    const prefixMatches = availableSkills.filter((skill) =>
+      normalizeSkill(skill).startsWith(query)
+    )
+    const fuzzyMatches = availableSkills.filter((skill) => {
+      const normalized = normalizeSkill(skill)
+      return !normalized.startsWith(query) && normalized.includes(query)
+    })
+
+    return [...prefixMatches, ...fuzzyMatches].slice(0, 14)
+  }, [existingSkillSet, newSkill])
 
   const fetchProfile = async () => {
     try {
@@ -56,7 +100,15 @@ export default function ProfilePage() {
           bio: data.bio || '',
           skills: data.skills || [],
           profilePhoto: data.profilePhoto || undefined,
-          socialLinks: data.socialLinks || {}
+          socialLinks: data.socialLinks || {},
+          contactCta: {
+            enabled: data.contactCta?.enabled !== false,
+            title: data.contactCta?.title || 'Let us work together',
+            description: data.contactCta?.description || 'Open to freelance, full-time roles, and collaboration opportunities.',
+            buttonLabel: data.contactCta?.buttonLabel || 'Contact me',
+            link: data.contactCta?.link || '',
+            email: data.contactCta?.email || '',
+          },
         })
       }
     } catch (error) {
@@ -89,14 +141,26 @@ export default function ProfilePage() {
     }
   }
 
-  const addSkill = () => {
-    if (newSkill.trim() && !profile.skills.includes(newSkill.trim())) {
-      setProfile(prev => ({
+  const addSkillValue = (skillValue: string) => {
+    const trimmed = skillValue.trim()
+    if (!trimmed) return
+
+    setProfile((prev) => {
+      const alreadyExists = prev.skills.some(
+        (skill) => normalizeSkill(skill) === normalizeSkill(trimmed)
+      )
+      if (alreadyExists) return prev
+
+      return {
         ...prev,
-        skills: [...prev.skills, newSkill.trim()]
-      }))
-      setNewSkill('')
-    }
+        skills: [...prev.skills, trimmed]
+      }
+    })
+    setNewSkill('')
+  }
+
+  const addSkill = () => {
+    addSkillValue(newSkill)
   }
 
   const removeSkill = (skillToRemove: string) => {
@@ -104,6 +168,22 @@ export default function ProfilePage() {
       ...prev,
       skills: prev.skills.filter(skill => skill !== skillToRemove)
     }))
+  }
+
+  const moveSkill = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return
+    setProfile((prev) => {
+      const nextSkills = [...prev.skills]
+      if (fromIndex >= nextSkills.length || toIndex >= nextSkills.length) {
+        return prev
+      }
+      const [moved] = nextSkills.splice(fromIndex, 1)
+      nextSkills.splice(toIndex, 0, moved)
+      return {
+        ...prev,
+        skills: nextSkills,
+      }
+    })
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -136,8 +216,8 @@ export default function ProfilePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Profile Settings</h1>
+            <p className="text-muted-foreground">
               Update your profile information and social links
             </p>
           </div>
@@ -155,9 +235,9 @@ export default function ProfilePage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Basic Information */}
-          <Card>
+          <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -188,7 +268,7 @@ export default function ProfilePage() {
                   rows={4}
                   maxLength={500}
                 />
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   {profile.bio.length}/500 characters
                 </p>
               </div>
@@ -196,7 +276,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Social Links */}
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LinkIcon className="h-5 w-5" />
@@ -206,57 +286,157 @@ export default function ProfilePage() {
                 Connect your social profiles
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="github">GitHub</Label>
-                <Input
-                  id="github"
-                  value={profile.socialLinks.github || ''}
-                  onChange={(e) => setProfile(prev => ({
-                    ...prev,
-                    socialLinks: { ...prev.socialLinks, github: e.target.value }
-                  }))}
-                  placeholder="https://github.com/username"
-                />
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="github">GitHub</Label>
+                  <Input
+                    id="github"
+                    value={profile.socialLinks.github || ''}
+                    onChange={(e) => setProfile(prev => ({
+                      ...prev,
+                      socialLinks: { ...prev.socialLinks, github: e.target.value }
+                    }))}
+                    placeholder="https://github.com/username"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="linkedin">LinkedIn</Label>
+                  <Input
+                    id="linkedin"
+                    value={profile.socialLinks.linkedin || ''}
+                    onChange={(e) => setProfile(prev => ({
+                      ...prev,
+                      socialLinks: { ...prev.socialLinks, linkedin: e.target.value }
+                    }))}
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="twitter">Twitter</Label>
+                  <Input
+                    id="twitter"
+                    value={profile.socialLinks.twitter || ''}
+                    onChange={(e) => setProfile(prev => ({
+                      ...prev,
+                      socialLinks: { ...prev.socialLinks, twitter: e.target.value }
+                    }))}
+                    placeholder="https://twitter.com/username"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={profile.socialLinks.website || ''}
+                    onChange={(e) => setProfile(prev => ({
+                      ...prev,
+                      socialLinks: { ...prev.socialLinks, website: e.target.value }
+                    }))}
+                    placeholder="https://yourwebsite.com"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="linkedin">LinkedIn</Label>
-                <Input
-                  id="linkedin"
-                  value={profile.socialLinks.linkedin || ''}
-                  onChange={(e) => setProfile(prev => ({
-                    ...prev,
-                    socialLinks: { ...prev.socialLinks, linkedin: e.target.value }
-                  }))}
-                  placeholder="https://linkedin.com/in/username"
-                />
-              </div>
+              <div className="pt-4 border-t border-border space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Contact CTA
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Show a contact card on your public profile.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={profile.contactCta.enabled}
+                    onCheckedChange={(checked) =>
+                      setProfile((prev) => ({
+                        ...prev,
+                        contactCta: { ...prev.contactCta, enabled: checked },
+                      }))
+                    }
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="twitter">Twitter</Label>
-                <Input
-                  id="twitter"
-                  value={profile.socialLinks.twitter || ''}
-                  onChange={(e) => setProfile(prev => ({
-                    ...prev,
-                    socialLinks: { ...prev.socialLinks, twitter: e.target.value }
-                  }))}
-                  placeholder="https://twitter.com/username"
-                />
-              </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-title">CTA Title</Label>
+                    <Input
+                      id="contact-title"
+                      value={profile.contactCta.title}
+                      onChange={(e) => setProfile((prev) => ({
+                        ...prev,
+                        contactCta: { ...prev.contactCta, title: e.target.value },
+                      }))}
+                      maxLength={120}
+                      placeholder="Let us work together"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  value={profile.socialLinks.website || ''}
-                  onChange={(e) => setProfile(prev => ({
-                    ...prev,
-                    socialLinks: { ...prev.socialLinks, website: e.target.value }
-                  }))}
-                  placeholder="https://yourwebsite.com"
-                />
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-button-label">Button Label</Label>
+                    <Input
+                      id="contact-button-label"
+                      value={profile.contactCta.buttonLabel}
+                      onChange={(e) => setProfile((prev) => ({
+                        ...prev,
+                        contactCta: { ...prev.contactCta, buttonLabel: e.target.value },
+                      }))}
+                      maxLength={40}
+                      placeholder="Contact me"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="contact-description">CTA Description</Label>
+                  <Textarea
+                    id="contact-description"
+                    value={profile.contactCta.description}
+                    onChange={(e) => setProfile((prev) => ({
+                      ...prev,
+                      contactCta: { ...prev.contactCta, description: e.target.value },
+                    }))}
+                    maxLength={240}
+                    rows={3}
+                    className="w-full"
+                    placeholder="Open to freelance, full-time roles, and collaboration opportunities."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-link">Contact Link (optional)</Label>
+                    <Input
+                      id="contact-link"
+                      value={profile.contactCta.link || ''}
+                      onChange={(e) => setProfile((prev) => ({
+                        ...prev,
+                        contactCta: { ...prev.contactCta, link: e.target.value },
+                      }))}
+                      placeholder="https://calendly.com/your-handle or mailto:you@example.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-email">Email fallback (optional)</Label>
+                    <Input
+                      id="contact-email"
+                      type="email"
+                      value={profile.contactCta.email || ''}
+                      onChange={(e) => setProfile((prev) => ({
+                        ...prev,
+                        contactCta: { ...prev.contactCta, email: e.target.value },
+                      }))}
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -296,23 +476,69 @@ export default function ProfilePage() {
                   value={newSkill}
                   onChange={(e) => setNewSkill(e.target.value)}
                   onKeyPress={handleKeyPress}
+                  list="popular-tech-skills"
                   placeholder="Add a skill (e.g., React, Python, etc.)"
                   className="flex-1"
                 />
+                <datalist id="popular-tech-skills">
+                  {suggestedSkills.map((skill) => (
+                    <option key={skill} value={skill} />
+                  ))}
+                </datalist>
                 <Button 
                   onClick={addSkill}
-                  disabled={!newSkill.trim() || profile.skills.includes(newSkill.trim())}
+                  disabled={!newSkill.trim() || isDuplicateSkill}
                 >
                   Add
                 </Button>
               </div>
 
+              {suggestedSkills.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Popular technologies (click to add)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestedSkills.map((skill) => (
+                      <Button
+                        key={`suggestion-${skill}`}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => addSkillValue(skill)}
+                      >
+                        {skill}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
-                {profile.skills.map((skill) => (
+                {profile.skills.map((skill, index) => (
                   <Badge 
-                    key={skill} 
+                    key={`${skill}-${index}`}
                     variant="secondary" 
-                    className="flex items-center gap-1 pr-1"
+                    className="flex items-center gap-1 pr-1 cursor-grab active:cursor-grabbing"
+                    draggable
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'move'
+                      event.dataTransfer.setData('text/plain', String(index))
+                      setDraggedSkillIndex(index)
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      event.dataTransfer.dropEffect = 'move'
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      const fromIndex = draggedSkillIndex ?? Number(event.dataTransfer.getData('text/plain'))
+                      if (Number.isNaN(fromIndex)) return
+                      moveSkill(fromIndex, index)
+                      setDraggedSkillIndex(null)
+                    }}
+                    onDragEnd={() => setDraggedSkillIndex(null)}
                   >
                     {skill}
                     <Button
@@ -328,7 +554,7 @@ export default function ProfilePage() {
               </div>
 
               {profile.skills.length === 0 && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   No skills added yet. Start by adding your technical skills and technologies.
                 </p>
               )}
