@@ -449,13 +449,9 @@ async function main() {
       ? profiles.filter((profile) => String(profile._id) !== String(canonicalProfile._id))
       : []
 
-    const mergedProviders = uniqueStrings(
-      sortedUsers.flatMap((user) => getProvidersFromUser(user)),
-      { lowerCase: true }
-    )
     const primaryProvider =
       (VALID_PROVIDERS.has(canonicalUser.provider) && canonicalUser.provider) ||
-      mergedProviders[0] ||
+      sortedUsers.map((user) => user.provider).find((provider) => VALID_PROVIDERS.has(provider)) ||
       'google'
 
     const groupProfileIds = profiles.map((profile) => profile._id)
@@ -488,7 +484,7 @@ async function main() {
       email: normalizedEmail,
       name: selectedName || canonicalUser.name || normalizedEmail.split('@')[0],
       provider: primaryProvider,
-      providers: mergedProviders.length > 0 ? mergedProviders : [primaryProvider],
+      providers: [primaryProvider],
       updatedAt: new Date(),
     }
 

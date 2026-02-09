@@ -40,19 +40,19 @@ class Database {
     return provider === 'google' || provider === 'github'
   }
 
-  private getLinkedProviders(user: any): OAuthProvider[] {
-    const providerList = Array.isArray(user?.providers) ? user.providers : []
-    const normalizedProviders = providerList.filter((provider: unknown): provider is OAuthProvider => this.isOAuthProvider(provider))
-
-    if (normalizedProviders.length > 0) {
-      return Array.from(new Set(normalizedProviders))
-    }
-
+  private getPrimaryProvider(user: any): OAuthProvider | undefined {
     if (this.isOAuthProvider(user?.provider)) {
-      return [user.provider]
+      return user.provider
     }
 
-    return []
+    if (Array.isArray(user?.providers)) {
+      const fallback = user.providers.find((provider: unknown): provider is OAuthProvider => this.isOAuthProvider(provider))
+      if (fallback) {
+        return fallback
+      }
+    }
+
+    return undefined
   }
 
   private isHexColor(value: unknown): value is string {
@@ -102,18 +102,14 @@ class Database {
   }
 
   private serializeUser(user: any): IUserData {
-    const providers = this.getLinkedProviders(user)
-    const primaryProvider = this.isOAuthProvider(user?.provider)
-      ? user.provider
-      : (providers[0] ?? 'google')
-
+    const primaryProvider = this.getPrimaryProvider(user) ?? 'google'
     return {
       _id: user._id?.toString(),
       email: user.email,
       name: user.name,
       image: user.image,
       provider: primaryProvider,
-      providers,
+      providers: primaryProvider ? [primaryProvider] : [],
       username: user.username,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
@@ -164,10 +160,12 @@ class Database {
     try {
       await connectDB()
       const normalizedEmail = this.normalizeEmail(userData.email)
-      const providers = Array.from(new Set([...(userData.providers ?? []), userData.provider]))
+      const provider = this.isOAuthProvider(userData.provider) ? userData.provider : 'google'
+      const providers = [provider]
       const user = new User({
         ...userData,
         email: normalizedEmail,
+        provider,
         providers,
       })
       const savedUser = await user.save()
@@ -195,10 +193,7 @@ class Database {
       const existingUser = await User.findOne({ email: normalizedEmail }).lean()
 
       if (existingUser) {
-        const existingProvider = this.isOAuthProvider(existingUser?.provider)
-          ? existingUser.provider
-          : undefined
-
+        const existingProvider = this.getPrimaryProvider(existingUser)
         if (existingProvider && existingProvider !== userData.provider) {
           console.warn('OAuth upsert blocked: provider mismatch', {
             email: normalizedEmail,
@@ -210,11 +205,8 @@ class Database {
 
         const setUpdates: Record<string, unknown> = {
           updatedAt: new Date(),
-        }
-
-        if (!existingProvider) {
-          setUpdates.provider = userData.provider
-          setUpdates.providers = [userData.provider]
+          provider: existingProvider ?? userData.provider,
+          providers: [existingProvider ?? userData.provider],
         }
 
         if (trimmedName) {
@@ -234,7 +226,7 @@ class Database {
         return user ? this.serializeUser(user) : null
       }
 
-      const newUserData: Record<string, unknown> = {
+      const setOnInsert: Record<string, unknown> = {
         email: normalizedEmail,
         provider: userData.provider,
         providers: [userData.provider],
@@ -242,11 +234,31 @@ class Database {
       }
 
       if (trimmedImage) {
-        newUserData.image = trimmedImage
+        setOnInsert.image = trimmedImage
       }
 
-      const newUser = await User.create(newUserData)
-      return newUser ? this.serializeUser(newUser.toObject()) : null
+      const setUpdates: Record<string, unknown> = {
+        updatedAt: new Date(),
+      }
+
+      if (trimmedName) {
+        setUpdates.name = trimmedName
+      }
+
+      if (trimmedImage) {
+        setUpdates.image = trimmedImage
+      }
+
+      const user = await User.findOneAndUpdate(
+        { email: normalizedEmail },
+        {
+          $setOnInsert: setOnInsert,
+          $set: setUpdates,
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      ).lean()
+
+      return user ? this.serializeUser(user) : null
     } catch (error) {
       console.error('Error upserting OAuth user:', error)
       return null
