@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
       })
 
       if (!currentUser) {
+        currentUser = await db.findUser(sessionEmail)
+      }
+
+      if (!currentUser) {
         return NextResponse.json({
           error: 'Unable to initialize your account. Please sign out and sign in again.',
         }, { status: 500 })

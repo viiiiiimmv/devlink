@@ -55,6 +55,10 @@ class Database {
     return []
   }
 
+  private mergeLinkedProviders(user: any, incomingProvider: OAuthProvider): OAuthProvider[] {
+    return Array.from(new Set([...this.getLinkedProviders(user), incomingProvider]))
+  }
+
   private isHexColor(value: unknown): value is string {
     return typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value.trim())
   }
@@ -192,11 +196,15 @@ class Database {
       const normalizedEmail = this.normalizeEmail(userData.email)
       const trimmedName = typeof userData.name === 'string' ? userData.name.trim() : ''
       const trimmedImage = typeof userData.image === 'string' ? userData.image.trim() : ''
+      const existingUser = await User.findOne({ email: normalizedEmail })
+        .select('provider providers')
+        .lean()
+      const mergedProviders = this.mergeLinkedProviders(existingUser, userData.provider)
 
       const setOnInsert: Record<string, unknown> = {
         email: normalizedEmail,
         provider: userData.provider,
-        providers: [userData.provider],
+        providers: mergedProviders,
         name: trimmedName || normalizedEmail.split('@')[0],
       }
 
@@ -206,6 +214,7 @@ class Database {
 
       const setUpdates: Record<string, unknown> = {
         provider: userData.provider,
+        providers: mergedProviders,
         updatedAt: new Date(),
       }
 
@@ -222,7 +231,6 @@ class Database {
         {
           $setOnInsert: setOnInsert,
           $set: setUpdates,
-          $addToSet: { providers: userData.provider },
         },
         { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
       ).lean()
