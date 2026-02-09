@@ -55,10 +55,6 @@ class Database {
     return []
   }
 
-  private mergeLinkedProviders(user: any, incomingProvider: OAuthProvider): OAuthProvider[] {
-    return Array.from(new Set([...this.getLinkedProviders(user), incomingProvider]))
-  }
-
   private isHexColor(value: unknown): value is string {
     return typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value.trim())
   }
@@ -196,44 +192,61 @@ class Database {
       const normalizedEmail = this.normalizeEmail(userData.email)
       const trimmedName = typeof userData.name === 'string' ? userData.name.trim() : ''
       const trimmedImage = typeof userData.image === 'string' ? userData.image.trim() : ''
-      const existingUser = await User.findOne({ email: normalizedEmail })
-        .select('provider providers')
-        .lean()
-      const mergedProviders = this.mergeLinkedProviders(existingUser, userData.provider)
+      const existingUser = await User.findOne({ email: normalizedEmail }).lean()
 
-      const setOnInsert: Record<string, unknown> = {
+      if (existingUser) {
+        const existingProvider = this.isOAuthProvider(existingUser?.provider)
+          ? existingUser.provider
+          : undefined
+
+        if (existingProvider && existingProvider !== userData.provider) {
+          console.warn('OAuth upsert blocked: provider mismatch', {
+            email: normalizedEmail,
+            existingProvider,
+            incomingProvider: userData.provider,
+          })
+          return null
+        }
+
+        const setUpdates: Record<string, unknown> = {
+          updatedAt: new Date(),
+        }
+
+        if (!existingProvider) {
+          setUpdates.provider = userData.provider
+          setUpdates.providers = [userData.provider]
+        }
+
+        if (trimmedName) {
+          setUpdates.name = trimmedName
+        }
+
+        if (trimmedImage) {
+          setUpdates.image = trimmedImage
+        }
+
+        const user = await User.findOneAndUpdate(
+          { email: normalizedEmail },
+          { $set: setUpdates },
+          { new: true, runValidators: true }
+        ).lean()
+
+        return user ? this.serializeUser(user) : null
+      }
+
+      const newUserData: Record<string, unknown> = {
         email: normalizedEmail,
+        provider: userData.provider,
+        providers: [userData.provider],
         name: trimmedName || normalizedEmail.split('@')[0],
       }
 
       if (trimmedImage) {
-        setOnInsert.image = trimmedImage
+        newUserData.image = trimmedImage
       }
 
-      const setUpdates: Record<string, unknown> = {
-        provider: userData.provider,
-        providers: mergedProviders,
-        updatedAt: new Date(),
-      }
-
-      if (trimmedName) {
-        setUpdates.name = trimmedName
-      }
-
-      if (trimmedImage) {
-        setUpdates.image = trimmedImage
-      }
-
-      const user = await User.findOneAndUpdate(
-        { email: normalizedEmail },
-        {
-          $setOnInsert: setOnInsert,
-          $set: setUpdates,
-        },
-        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-      ).lean()
-
-      return user ? this.serializeUser(user) : null
+      const newUser = await User.create(newUserData)
+      return newUser ? this.serializeUser(newUser.toObject()) : null
     } catch (error) {
       console.error('Error upserting OAuth user:', error)
       return null

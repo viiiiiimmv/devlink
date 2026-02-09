@@ -37,7 +37,6 @@ export const authOptions: NextAuthOptions = {
       GoogleProvider({
         clientId: googleClientId!,
         clientSecret: googleClientSecret!,
-        allowDangerousEmailAccountLinking: true,
         authorization: {
           params: {
             prompt: 'consent',
@@ -51,7 +50,6 @@ export const authOptions: NextAuthOptions = {
       GitHubProvider({
         clientId: githubClientId!,
         clientSecret: githubClientSecret!,
-        allowDangerousEmailAccountLinking: true,
         authorization: {
           params: {
             scope: 'read:user user:email',
@@ -91,13 +89,15 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!dbUser) {
-          console.warn('SignIn warning: failed to persist OAuth user, allowing sign-in', {
+          console.warn('SignIn denied: OAuth user mismatch or persistence failure', {
             provider,
             email,
           })
+          return false
         }
       } catch (error) {
-        console.error('SignIn warning: OAuth user upsert failed, allowing sign-in:', error)
+        console.error('SignIn error: OAuth user upsert failed:', error)
+        return false
       }
 
       return true
