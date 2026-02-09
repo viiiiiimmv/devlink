@@ -226,7 +226,7 @@ class Database {
         return user ? this.serializeUser(user) : null
       }
 
-      const setOnInsert: Record<string, unknown> = {
+      const newUserData: Record<string, unknown> = {
         email: normalizedEmail,
         provider: userData.provider,
         providers: [userData.provider],
@@ -234,31 +234,11 @@ class Database {
       }
 
       if (trimmedImage) {
-        setOnInsert.image = trimmedImage
+        newUserData.image = trimmedImage
       }
 
-      const setUpdates: Record<string, unknown> = {
-        updatedAt: new Date(),
-      }
-
-      if (trimmedName) {
-        setUpdates.name = trimmedName
-      }
-
-      if (trimmedImage) {
-        setUpdates.image = trimmedImage
-      }
-
-      const user = await User.findOneAndUpdate(
-        { email: normalizedEmail },
-        {
-          $setOnInsert: setOnInsert,
-          $set: setUpdates,
-        },
-        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-      ).lean()
-
-      return user ? this.serializeUser(user) : null
+      const newUser = await User.create(newUserData)
+      return newUser ? this.serializeUser(newUser.toObject()) : null
     } catch (error) {
       console.error('Error upserting OAuth user:', error)
       return null
