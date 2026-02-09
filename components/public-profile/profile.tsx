@@ -59,6 +59,7 @@ interface Project {
   githubUrl?: string
   liveUrl?: string
   image?: string
+  imagePublicId?: string
   featured: boolean
 }
 
@@ -1174,18 +1175,6 @@ export default function PublicProfile({
         <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
           {/* Grain overlay */}
           <div className="grain" />
-
-          {/* Geometric Background Elements */}
-          <div className="fixed inset-0 overflow-hidden pointer-events-none">
-            <div
-                className="absolute top-1/4 right-1/4 w-2 h-2 rounded-full animate-pulse"
-                style={{ backgroundColor: themeColors.primary }}
-            />
-            <div
-                className="absolute bottom-1/3 left-1/3 w-2 h-2 rounded-full animate-pulse"
-                style={{ backgroundColor: themeColors.secondary }}
-            />
-          </div>
 
           {/* Hero Section - Magazine Editorial Layout */}
           <section className="relative min-h-screen flex items-center px-6 md:px-12 lg:px-24 py-16 md:py-20 lg:py-24 overflow-x-hidden">

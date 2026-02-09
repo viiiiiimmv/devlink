@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, description, technologies, githubUrl, liveUrl, image, featured } = body
+    const { title, description, technologies, githubUrl, liveUrl, image, imagePublicId, featured } = body
 
     // Validation
     if (!title || !description) {
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       githubUrl: githubUrl?.trim() || '',
       liveUrl: liveUrl?.trim() || '',
       image: image?.trim() || '',
+      imagePublicId: imagePublicId?.trim() || '',
       featured: featured || false
     }
 

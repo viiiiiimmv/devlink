@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: absoluteUrl('/'),
   },
+  icons: {
+    icon: 'https://res.cloudinary.com/ddyc6aljm/image/upload/v1770660658/Group_14_wvsc34.png',
+  },
   openGraph: {
     title: `${SITE_NAME} - Developer Portfolio Builder`,
     description: SITE_DESCRIPTION,

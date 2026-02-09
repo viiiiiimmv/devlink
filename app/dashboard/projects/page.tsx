@@ -19,6 +19,7 @@ interface Project {
   githubUrl?: string
   liveUrl?: string
   image?: string
+  imagePublicId?: string
   featured: boolean
 }
 

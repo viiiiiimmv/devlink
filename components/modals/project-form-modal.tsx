@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import ProjectImageUpload from '@/components/ProjectImageUpload'
 import toast from 'react-hot-toast'
 
 interface Project {
@@ -25,6 +26,7 @@ interface Project {
   githubUrl?: string
   liveUrl?: string
   image?: string
+  imagePublicId?: string
   featured: boolean
 }
 
@@ -48,6 +50,7 @@ export default function ProjectFormModal({
     githubUrl: '',
     liveUrl: '',
     image: '',
+    imagePublicId: '',
     featured: false
   })
   const [newTech, setNewTech] = useState('')
@@ -66,6 +69,7 @@ export default function ProjectFormModal({
         githubUrl: '',
         liveUrl: '',
         image: '',
+        imagePublicId: '',
         featured: false
       })
     }
@@ -93,6 +97,14 @@ export default function ProjectFormModal({
       e.preventDefault()
       addTechnology()
     }
+  }
+
+  const handleImageChange = (image: { url: string; publicId: string } | null) => {
+    setFormData(prev => ({
+      ...prev,
+      image: image?.url || '',
+      imagePublicId: image?.publicId || ''
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -242,13 +254,10 @@ export default function ProjectFormModal({
 
           {/* Image URL */}
           <div className="space-y-2">
-            <Label htmlFor="image">Image URL</Label>
-            <Input
-              id="image"
-              type="url"
-              value={formData.image}
-              onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
-              placeholder="https://example.com/project-image.jpg"
+            <Label>Project Image</Label>
+            <ProjectImageUpload
+              currentImage={formData.image}
+              onImageChange={handleImageChange}
             />
           </div>
 

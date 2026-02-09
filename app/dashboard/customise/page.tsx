@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Profile } from '@/components/public-profile/profile'
 import { ArrowDown, ArrowUp, Eye, EyeOff, Globe2, GripVertical, LayoutGrid, Palette, Save } from 'lucide-react'
 import PortfolioLivePreview from '@/components/PortfolioLivePreview'
@@ -38,6 +38,8 @@ const DEFAULT_CUSTOM_THEME: CustomThemeSettings = {
   primary: '#2563eb',
   secondary: '#14b8a6',
 }
+
+const DESKTOP_PREVIEW_WIDTH = 1280
 
 const isHexColor = (value: unknown): value is string =>
   typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value.trim())
@@ -83,6 +85,10 @@ const areSectionSettingsEqual = (
 }
 
 export default function CustomisePage() {
+  const previewContainerRef = useRef<HTMLDivElement | null>(null)
+  const previewContentRef = useRef<HTMLDivElement | null>(null)
+  const [previewScale, setPreviewScale] = useState(1)
+  const [previewHeight, setPreviewHeight] = useState(0)
   const [selectedTheme, setSelectedTheme] = useState(DEFAULT_PROFILE_THEME)
   const [selectedTemplate, setSelectedTemplate] = useState(DEFAULT_PROFILE_TEMPLATE)
   const [isPublished, setIsPublished] = useState(true)
@@ -96,6 +102,34 @@ export default function CustomisePage() {
 
   useEffect(() => {
     fetchCustomisation()
+  }, [])
+
+  useEffect(() => {
+    const container = previewContainerRef.current
+    const content = previewContentRef.current
+
+    if (!container || !content || typeof ResizeObserver === 'undefined') {
+      return
+    }
+
+    const updateScale = () => {
+      const containerWidth = container.clientWidth
+      if (!containerWidth) return
+
+      const nextScale = Math.min(1, containerWidth / DESKTOP_PREVIEW_WIDTH)
+      setPreviewScale(nextScale)
+
+      const contentHeight = content.scrollHeight
+      setPreviewHeight(Math.ceil(contentHeight * nextScale))
+    }
+
+    updateScale()
+
+    const resizeObserver = new ResizeObserver(updateScale)
+    resizeObserver.observe(container)
+    resizeObserver.observe(content)
+
+    return () => resizeObserver.disconnect()
   }, [])
 
   const fetchCustomisation = async () => {
@@ -381,404 +415,425 @@ export default function CustomisePage() {
           </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LayoutGrid className="h-6 w-6 text-blue-600" />
-              Profile Templates
-            </CardTitle>
-            <CardDescription>
-              Select a design language for your public profile
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              value={selectedTemplate}
-              onValueChange={(value) => {
-                if (isValidTemplate(value)) {
-                  setSelectedTemplate(value)
-                }
-              }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4"
-            >
-              {templateOptions.map((template) => (
-                <label
-                  key={template.id}
-                  htmlFor={`template-${template.id}`}
-                  className={`cursor-pointer group rounded-xl border-2 p-4 transition-all duration-150 ${
-                    selectedTemplate === template.id
-                      ? 'border-blue-500 shadow-lg'
-                      : 'border-border hover:border-blue-300'
-                  }`}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LayoutGrid className="h-6 w-6 text-blue-600" />
+                  Profile Templates
+                </CardTitle>
+                <CardDescription>
+                  Select a design language for your public profile
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={selectedTemplate}
+                  onValueChange={(value) => {
+                    if (isValidTemplate(value)) {
+                      setSelectedTemplate(value)
+                    }
+                  }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
                 >
-                  <div className="w-full h-20 rounded-lg mb-3">
-                    {renderTemplatePreview(template.id)}
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-foreground group-hover:text-blue-600">
-                        {template.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{template.vibe}</p>
-                    </div>
-                    <RadioGroupItem value={template.id} id={`template-${template.id}`} />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">{template.description}</p>
-                </label>
-              ))}
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GripVertical className="h-6 w-6 text-blue-600" />
-              Section Layout
-            </CardTitle>
-            <CardDescription>
-              Drag to reorder profile sections and hide the blocks you do not want to display
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {sectionSettings.map((section, index) => {
-                const option = sectionOptionMap[section.id]
-
-                return (
-                  <div
-                    key={section.id}
-                    draggable
-                    onDragStart={() => setDraggedSectionId(section.id)}
-                    onDragEnd={() => {
-                      setDraggedSectionId(null)
-                      setDragOverSectionId(null)
-                    }}
-                    onDragOver={(event) => {
-                      event.preventDefault()
-                      if (dragOverSectionId !== section.id) {
-                        setDragOverSectionId(section.id)
-                      }
-                    }}
-                    onDrop={(event) => {
-                      event.preventDefault()
-                      handleSectionDrop(section.id)
-                    }}
-                    className={`rounded-xl border p-3 md:p-4 transition-all ${
-                      dragOverSectionId === section.id
-                        ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/20'
-                        : 'border-border bg-card'
-                    }`}
-                  >
-                    <div className="flex items-start md:items-center justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 text-muted-foreground cursor-grab active:cursor-grabbing">
-                          <GripVertical className="h-5 w-5" />
-                        </div>
+                  {templateOptions.map((template) => (
+                    <label
+                      key={template.id}
+                      htmlFor={`template-${template.id}`}
+                      className={`cursor-pointer group rounded-xl border-2 p-4 transition-all duration-150 ${
+                        selectedTemplate === template.id
+                          ? 'border-blue-500 shadow-lg'
+                          : 'border-border hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="w-full h-20 rounded-lg mb-3">
+                        {renderTemplatePreview(template.id)}
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-semibold text-foreground">{option?.name ?? section.id}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {option?.description ?? 'Profile section'}
+                          <p className="font-semibold text-foreground group-hover:text-blue-600">
+                            {template.name}
                           </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{template.vibe}</p>
+                        </div>
+                        <RadioGroupItem value={template.id} id={`template-${template.id}`} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">{template.description}</p>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <GripVertical className="h-6 w-6 text-blue-600" />
+                  Section Layout
+                </CardTitle>
+                <CardDescription>
+                  Drag to reorder profile sections and hide the blocks you do not want to display
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {sectionSettings.map((section, index) => {
+                    const option = sectionOptionMap[section.id]
+
+                    return (
+                      <div
+                        key={section.id}
+                        draggable
+                        onDragStart={() => setDraggedSectionId(section.id)}
+                        onDragEnd={() => {
+                          setDraggedSectionId(null)
+                          setDragOverSectionId(null)
+                        }}
+                        onDragOver={(event) => {
+                          event.preventDefault()
+                          if (dragOverSectionId !== section.id) {
+                            setDragOverSectionId(section.id)
+                          }
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault()
+                          handleSectionDrop(section.id)
+                        }}
+                        className={`rounded-xl border p-3 md:p-4 transition-all ${
+                          dragOverSectionId === section.id
+                            ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/20'
+                            : 'border-border bg-card'
+                        }`}
+                      >
+                        <div className="flex items-start md:items-center justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 text-muted-foreground cursor-grab active:cursor-grabbing">
+                              <GripVertical className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">{option?.name ?? section.id}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {option?.description ?? 'Profile section'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => moveSection(index, index - 1)}
+                              disabled={index === 0}
+                              aria-label={`Move ${option?.name ?? section.id} up`}
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => moveSection(index, index + 1)}
+                              disabled={index === sectionSettings.length - 1}
+                              aria-label={`Move ${option?.name ?? section.id} down`}
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={section.visible ? 'outline' : 'secondary'}
+                              size="sm"
+                              className="h-8"
+                              onClick={() => toggleSectionVisibility(section.id)}
+                            >
+                              {section.visible ? (
+                                <>
+                                  <Eye className="h-4 w-4 mr-1.5" />
+                                  Visible
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="h-4 w-4 mr-1.5" />
+                                  Hidden
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </div>
+                    )
+                  })}
+                </div>
 
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => moveSection(index, index - 1)}
-                          disabled={index === 0}
-                          aria-label={`Move ${option?.name ?? section.id} up`}
+                <p className="text-xs text-muted-foreground mt-4">
+                  Hidden sections are removed from both preview and your public profile.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-6 w-6 text-blue-600" />
+                  Theme Palette
+                </CardTitle>
+                <CardDescription>
+                  20 redesigned themes grouped by light and dark, and usable with every template
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={selectedTheme}
+                  onValueChange={(value) => {
+                    if (isValidTheme(value)) {
+                      setSelectedTheme(value)
+                    }
+                  }}
+                  className="space-y-8"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-foreground">Light Themes</h3>
+                      <span className="text-xs text-muted-foreground">10 options</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                      {lightThemes.map((theme) => (
+                        <label
+                          key={theme.id}
+                          htmlFor={`theme-${theme.id}`}
+                          className={`cursor-pointer group block rounded-lg border-2 p-3 transition-all duration-150 ${
+                            selectedTheme === theme.id
+                              ? 'border-blue-500 shadow-lg'
+                              : 'border-border hover:border-blue-300'
+                          }`}
                         >
-                          <ArrowUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => moveSection(index, index + 1)}
-                          disabled={index === sectionSettings.length - 1}
-                          aria-label={`Move ${option?.name ?? section.id} down`}
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={section.visible ? 'outline' : 'secondary'}
-                          size="sm"
-                          className="h-8"
-                          onClick={() => toggleSectionVisibility(section.id)}
-                        >
-                          {section.visible ? (
-                            <>
-                              <Eye className="h-4 w-4 mr-1.5" />
-                              Visible
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="h-4 w-4 mr-1.5" />
-                              Hidden
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                          {renderThemePreview(theme.id)}
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-foreground group-hover:text-blue-600">
+                              {theme.name}
+                            </span>
+                            <RadioGroupItem value={theme.id} id={`theme-${theme.id}`} className="ml-2" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{theme.description}</p>
+                        </label>
+                      ))}
                     </div>
                   </div>
-                )
-              })}
-            </div>
 
-            <p className="text-xs text-muted-foreground mt-4">
-              Hidden sections are removed from both preview and your public profile.
-            </p>
-          </CardContent>
-        </Card>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-foreground">Dark Themes</h3>
+                      <span className="text-xs text-muted-foreground">10 options</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                      {darkThemes.map((theme) => (
+                        <label
+                          key={theme.id}
+                          htmlFor={`theme-${theme.id}`}
+                          className={`cursor-pointer group block rounded-lg border-2 p-3 transition-all duration-150 ${
+                            selectedTheme === theme.id
+                              ? 'border-blue-500 shadow-lg'
+                              : 'border-border hover:border-blue-300'
+                          }`}
+                        >
+                          {renderThemePreview(theme.id)}
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-foreground group-hover:text-blue-600">
+                              {theme.name}
+                            </span>
+                            <RadioGroupItem value={theme.id} id={`theme-${theme.id}`} className="ml-2" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{theme.description}</p>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-6 w-6 text-blue-600" />
-              Theme Palette
-            </CardTitle>
-            <CardDescription>
-              20 redesigned themes grouped by light and dark, and usable with every template
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              value={selectedTheme}
-              onValueChange={(value) => {
-                if (isValidTheme(value)) {
-                  setSelectedTheme(value)
-                }
-              }}
-              className="space-y-8"
-            >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">Light Themes</h3>
-                  <span className="text-xs text-muted-foreground">10 options</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {lightThemes.map((theme) => (
-                    <label
-                      key={theme.id}
-                      htmlFor={`theme-${theme.id}`}
-                      className={`cursor-pointer group block rounded-lg border-2 p-3 transition-all duration-150 ${
-                        selectedTheme === theme.id
-                          ? 'border-blue-500 shadow-lg'
-                          : 'border-border hover:border-blue-300'
-                      }`}
-                    >
-                      {renderThemePreview(theme.id)}
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-foreground group-hover:text-blue-600">
-                          {theme.name}
-                        </span>
-                        <RadioGroupItem value={theme.id} id={`theme-${theme.id}`} className="ml-2" />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{theme.description}</p>
-                    </label>
-                  ))}
-                </div>
-              </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-6 w-6 text-blue-600" />
+                  Custom Theme Editor
+                </CardTitle>
+                <CardDescription>
+                  Override the selected theme with your own primary and secondary colors
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+                  <div>
+                    <p className="font-medium text-foreground">Enable custom colors</p>
+                    <p className="text-xs text-muted-foreground">
+                      Keep your current template and only swap accent colors.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={customTheme.enabled}
+                    onCheckedChange={(checked) => {
+                      setCustomTheme((current) => {
+                        if (!checked) {
+                          return { ...current, enabled: false }
+                        }
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">Dark Themes</h3>
-                  <span className="text-xs text-muted-foreground">10 options</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {darkThemes.map((theme) => (
-                    <label
-                      key={theme.id}
-                      htmlFor={`theme-${theme.id}`}
-                      className={`cursor-pointer group block rounded-lg border-2 p-3 transition-all duration-150 ${
-                        selectedTheme === theme.id
-                          ? 'border-blue-500 shadow-lg'
-                          : 'border-border hover:border-blue-300'
-                      }`}
-                    >
-                      {renderThemePreview(theme.id)}
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-foreground group-hover:text-blue-600">
-                          {theme.name}
-                        </span>
-                        <RadioGroupItem value={theme.id} id={`theme-${theme.id}`} className="ml-2" />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">{theme.description}</p>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
+                        const isDefaultPalette =
+                          current.primary === DEFAULT_CUSTOM_THEME.primary &&
+                          current.secondary === DEFAULT_CUSTOM_THEME.secondary
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-6 w-6 text-blue-600" />
-              Custom Theme Editor
-            </CardTitle>
-            <CardDescription>
-              Override the selected theme with your own primary and secondary colors
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
-              <div>
-                <p className="font-medium text-foreground">Enable custom colors</p>
-                <p className="text-xs text-muted-foreground">
-                  Keep your current template and only swap accent colors.
-                </p>
-              </div>
-              <Switch
-                checked={customTheme.enabled}
-                onCheckedChange={(checked) => {
-                  setCustomTheme((current) => {
-                    if (!checked) {
-                      return { ...current, enabled: false }
-                    }
+                        if (isDefaultPalette) {
+                          return {
+                            enabled: true,
+                            primary: selectedThemePalette.primary,
+                            secondary: selectedThemePalette.secondary,
+                          }
+                        }
 
-                    const isDefaultPalette =
-                      current.primary === DEFAULT_CUSTOM_THEME.primary &&
-                      current.secondary === DEFAULT_CUSTOM_THEME.secondary
-
-                    if (isDefaultPalette) {
-                      return {
-                        enabled: true,
-                        primary: selectedThemePalette.primary,
-                        secondary: selectedThemePalette.secondary,
-                      }
-                    }
-
-                    return { ...current, enabled: true }
-                  })
-                }}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="custom-primary">Primary color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="custom-primary"
-                    type="color"
-                    value={customTheme.primary}
-                    onChange={(event) => {
-                      const nextColor = event.target.value
-                      setCustomTheme((current) => ({ ...current, primary: nextColor }))
+                        return { ...current, enabled: true }
+                      })
                     }}
-                    className="h-10 w-16 cursor-pointer p-1"
-                  />
-                  <Input
-                    value={customTheme.primary}
-                    readOnly
-                    className="font-mono uppercase"
-                    maxLength={7}
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="custom-secondary">Secondary color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="custom-secondary"
-                    type="color"
-                    value={customTheme.secondary}
-                    onChange={(event) => {
-                      const nextColor = event.target.value
-                      setCustomTheme((current) => ({ ...current, secondary: nextColor }))
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-primary">Primary color</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="custom-primary"
+                        type="color"
+                        value={customTheme.primary}
+                        onChange={(event) => {
+                          const nextColor = event.target.value
+                          setCustomTheme((current) => ({ ...current, primary: nextColor }))
+                        }}
+                        className="h-10 w-16 cursor-pointer p-1"
+                      />
+                      <Input
+                        value={customTheme.primary}
+                        readOnly
+                        className="font-mono uppercase"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-secondary">Secondary color</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="custom-secondary"
+                        type="color"
+                        value={customTheme.secondary}
+                        onChange={(event) => {
+                          const nextColor = event.target.value
+                          setCustomTheme((current) => ({ ...current, secondary: nextColor }))
+                        }}
+                        className="h-10 w-16 cursor-pointer p-1"
+                      />
+                      <Input
+                        value={customTheme.secondary}
+                        readOnly
+                        className="font-mono uppercase"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border p-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground mb-2">Color Preview</p>
+                  <div
+                    className="h-20 rounded-lg border border-border"
+                    style={{
+                      backgroundImage: `linear-gradient(135deg, ${
+                        customTheme.enabled ? customTheme.primary : selectedThemePalette.primary
+                      }, ${customTheme.enabled ? customTheme.secondary : selectedThemePalette.secondary})`,
                     }}
-                    className="h-10 w-16 cursor-pointer p-1"
-                  />
-                  <Input
-                    value={customTheme.secondary}
-                    readOnly
-                    className="font-mono uppercase"
-                    maxLength={7}
                   />
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="rounded-xl border border-border p-3">
-              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground mb-2">Color Preview</p>
-              <div
-                className="h-20 rounded-lg border border-border"
-                style={{
-                  backgroundImage: `linear-gradient(135deg, ${
-                    customTheme.enabled ? customTheme.primary : selectedThemePalette.primary
-                  }, ${customTheme.enabled ? customTheme.secondary : selectedThemePalette.secondary})`,
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe2 className="h-6 w-6 text-blue-600" />
+                  Publish Controls
+                </CardTitle>
+                <CardDescription>
+                  Control whether your public portfolio is visible to everyone
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-semibold text-foreground">
+                      {isPublished ? 'Portfolio is published' : 'Portfolio is in draft mode'}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {isPublished
+                        ? 'Visitors can open your public profile URL.'
+                        : 'Only you can preview your profile while editing.'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs font-semibold uppercase tracking-[0.14em] ${isPublished ? 'text-green-600' : 'text-amber-600'}`}>
+                      {isPublished ? 'Live' : 'Draft'}
+                    </span>
+                    <Switch checked={isPublished} onCheckedChange={setIsPublished} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe2 className="h-6 w-6 text-blue-600" />
-              Publish Controls
-            </CardTitle>
-            <CardDescription>
-              Control whether your public portfolio is visible to everyone
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-semibold text-foreground">
-                  {isPublished ? 'Portfolio is published' : 'Portfolio is in draft mode'}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {isPublished
-                    ? 'Visitors can open your public profile URL.'
-                    : 'Only you can preview your profile while editing.'}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-xs font-semibold uppercase tracking-[0.14em] ${isPublished ? 'text-green-600' : 'text-amber-600'}`}>
-                  {isPublished ? 'Live' : 'Draft'}
-                </span>
-                <Switch checked={isPublished} onCheckedChange={setIsPublished} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Live Preview</CardTitle>
-            <CardDescription>
-              Preview your selected template and theme in real-time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="w-full h-[70vh] overflow-y-auto bg-muted/40 rounded-lg border border-border">
-              <PortfolioLivePreview
-                key={`${selectedTemplate}-${selectedTheme}-${isPublished ? 'published' : 'draft'}-${customTheme.enabled ? `${customTheme.primary}-${customTheme.secondary}` : 'preset'}-${sectionSettings
-                  .map((section) => `${section.id}:${section.visible ? 1 : 0}`)
-                  .join('|')}`}
-                profile={{
-                  ...(profileData ?? emptyProfile),
-                  isPublished,
-                  customTheme,
-                  sectionSettings,
-                }}
-                themeId={selectedTheme}
-                templateId={selectedTemplate}
-              />
-            </div>
-          </CardContent>
-        </Card>
+          <div className="self-start lg:sticky lg:top-6">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle>Live Preview</CardTitle>
+                <CardDescription>
+                  Preview your selected template and theme in real-time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div
+                  ref={previewContainerRef}
+                  className="w-full h-[70vh] overflow-auto bg-muted/40 rounded-lg border border-border"
+                >
+                  <div className="relative w-full" style={{ height: previewHeight || '70vh' }}>
+                    <div
+                      ref={previewContentRef}
+                      className="absolute top-0 left-0"
+                      style={{
+                        width: DESKTOP_PREVIEW_WIDTH,
+                        transform: `scale(${previewScale})`,
+                        transformOrigin: 'top left',
+                      }}
+                    >
+                      <PortfolioLivePreview
+                        key={`${selectedTemplate}-${selectedTheme}-${isPublished ? 'published' : 'draft'}-${customTheme.enabled ? `${customTheme.primary}-${customTheme.secondary}` : 'preset'}-${sectionSettings
+                          .map((section) => `${section.id}:${section.visible ? 1 : 0}`)
+                          .join('|')}`}
+                        profile={{
+                          ...(profileData ?? emptyProfile),
+                          isPublished,
+                          customTheme,
+                          sectionSettings,
+                        }}
+                        themeId={selectedTheme}
+                        templateId={selectedTemplate}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   )

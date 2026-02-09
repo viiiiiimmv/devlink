@@ -16,6 +16,7 @@ export interface IProject {
   githubUrl?: string
   liveUrl?: string
   image?: string
+  imagePublicId?: string
   featured: boolean
 }
 
@@ -112,6 +113,7 @@ const ProjectSchema = new Schema({
   githubUrl: { type: String, trim: true },
   liveUrl: { type: String, trim: true },
   image: { type: String, trim: true },
+  imagePublicId: { type: String, trim: true },
   featured: { type: Boolean, default: false },
 })
 
