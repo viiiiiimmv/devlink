@@ -203,8 +203,6 @@ class Database {
 
       const setOnInsert: Record<string, unknown> = {
         email: normalizedEmail,
-        provider: userData.provider,
-        providers: mergedProviders,
         name: trimmedName || normalizedEmail.split('@')[0],
       }
 
