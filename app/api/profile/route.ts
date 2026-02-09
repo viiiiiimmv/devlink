@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { v2 as cloudinary } from 'cloudinary'
 import { revalidatePath } from 'next/cache'
+import { isValidUsername, normalizeUsernameInput, USERNAME_VALIDATION_MESSAGE } from '@/lib/username'
 
 // Configure Cloudinary
 cloudinary.config({
@@ -139,17 +140,25 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { username: newUsername } = await request.json()
+    const body = await request.json().catch(() => null)
+    const newUsername = normalizeUsernameInput(body?.username)
 
     if (!newUsername) {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 })
     }
 
-    // Validate username format
-    if (!/^[a-z][a-z0-9]*[a-z][a-z0-9]*$|^[a-z][a-z0-9]*$/.test(newUsername)) {
+    if (!isValidUsername(newUsername)) {
       return NextResponse.json({ 
-        error: 'Username must start with a letter, contain at least one letter, and only use lowercase letters and numbers' 
+        error: USERNAME_VALIDATION_MESSAGE,
       }, { status: 400 })
+    }
+
+    if (newUsername === username) {
+      return NextResponse.json({
+        success: true,
+        username: newUsername,
+        message: 'Username updated successfully',
+      })
     }
 
     // Check if username is available

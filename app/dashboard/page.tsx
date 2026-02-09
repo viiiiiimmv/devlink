@@ -50,7 +50,7 @@ export default function Dashboard() {
 
   // Type guard for session user
   const hasUsername = (session: any): session is { user: { username: string } } => {
-    return session?.user?.username != null
+    return typeof session?.user?.username === 'string' && session.user.username.trim().length > 0
   }
 
   useEffect(() => {

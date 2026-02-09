@@ -25,6 +25,8 @@ const hasGoogleProvider = Boolean(googleClientId && googleClientSecret)
 const hasGitHubProvider = Boolean(githubClientId && githubClientSecret)
 const isOAuthProvider = (provider: string | undefined): provider is OAuthProvider =>
   provider === 'google' || provider === 'github'
+const toOAuthProvider = (value: unknown): OAuthProvider | undefined =>
+  typeof value === 'string' && isOAuthProvider(value) ? value : undefined
 const normalizeEmail = (value: unknown): string =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''
 
@@ -50,6 +52,11 @@ export const authOptions: NextAuthOptions = {
         clientId: githubClientId!,
         clientSecret: githubClientSecret!,
         allowDangerousEmailAccountLinking: true,
+        authorization: {
+          params: {
+            scope: 'read:user user:email',
+          },
+        },
       }),
     ] : []),
   ],
@@ -95,8 +102,15 @@ export const authOptions: NextAuthOptions = {
 
       return true
     },
-    async jwt({ token, account, user, trigger }) {
+    async jwt({ token, account, user, trigger, session }) {
       try {
+        if (account) {
+          const provider = toOAuthProvider(account.provider)
+          if (provider) {
+            token.provider = provider
+          }
+        }
+
         if (account && user) {
           const normalizedEmail = normalizeEmail(user.email)
           if (normalizedEmail) {
@@ -107,6 +121,7 @@ export const authOptions: NextAuthOptions = {
               token.name = dbUser.name
               token.picture = dbUser.image
               token.username = dbUser.username || null
+              token.provider = dbUser.provider
             } else {
               token.email = normalizedEmail
               if (typeof user.id === 'string') {
@@ -124,11 +139,30 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
+        if (trigger === 'update') {
+          const updatePayload =
+            typeof session === 'object' && session !== null
+              ? session as Record<string, unknown>
+              : {}
+
+          const updatedUsername = typeof updatePayload.username === 'string'
+            ? updatePayload.username.trim()
+            : ''
+          if (updatedUsername) {
+            token.username = updatedUsername
+          }
+
+          const updatedProvider = toOAuthProvider(updatePayload.provider)
+          if (updatedProvider) {
+            token.provider = updatedProvider
+          }
+        }
+
         const tokenEmail = normalizeEmail(token.email)
 
         // If the session is being updated, refresh username from database
-        // Also refresh if token is missing username but has an email.
-        if (tokenEmail && (trigger === 'update' || !token.username)) {
+        // Also refresh if token is missing username/provider but has an email.
+        if (tokenEmail && (trigger === 'update' || !token.username || !token.provider)) {
           const dbUser = await db.findUser(tokenEmail)
           if (dbUser) {
             token.id = dbUser._id
@@ -136,6 +170,7 @@ export const authOptions: NextAuthOptions = {
             token.name = dbUser.name
             token.picture = dbUser.image
             token.username = dbUser.username || null
+            token.provider = dbUser.provider
           }
         }
       } catch (error) {
@@ -154,6 +189,7 @@ export const authOptions: NextAuthOptions = {
             ...(session.user ?? {}),
             id: typeof token.id === 'string' ? token.id : undefined,
             username: typeof token.username === 'string' ? token.username : null,
+            provider: toOAuthProvider(token.provider),
             email: tokenEmail || session.user?.email || '',
             name:
               typeof token.name === 'string'

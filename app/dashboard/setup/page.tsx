@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -10,57 +10,82 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import toast from 'react-hot-toast'
+import { isValidUsername, normalizeUsernameInput, USERNAME_VALIDATION_MESSAGE } from '@/lib/username'
 
 export default function Setup() {
-  const { data: session, update: updateSession } = useSession()
+  const { status, update: updateSession } = useSession()
   const router = useRouter()
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
 
-  const checkUsername = async (value: string) => {
-    if (!value || value.length < 3) {
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/auth/signin?from=/dashboard/setup')
+    }
+  }, [status, router])
+
+  useEffect(() => {
+    if (!username) {
       setIsAvailable(null)
       return
     }
 
-    setChecking(true)
-    try {
-      const response = await fetch('/api/username/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: value }),
-      })
-
-      const data = await response.json()
-      setIsAvailable(data.available)
-    } catch (error) {
-      console.error('Error checking username:', error)
-    } finally {
-      setChecking(false)
+    if (!isValidUsername(username)) {
+      setIsAvailable(false)
+      return
     }
-  }
+
+    let active = true
+    const timeoutId = setTimeout(async () => {
+      setChecking(true)
+      try {
+        const response = await fetch('/api/username/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username }),
+        })
+        const data = await response.json()
+        if (active) {
+          setIsAvailable(Boolean(data?.available))
+        }
+      } catch (error) {
+        if (active) {
+          setIsAvailable(null)
+        }
+        console.error('Error checking username:', error)
+      } finally {
+        if (active) {
+          setChecking(false)
+        }
+      }
+    }, 350)
+
+    return () => {
+      active = false
+      clearTimeout(timeoutId)
+    }
+  }, [username])
 
   const handleUsernameChange = (value: string) => {
-    // Clean username: only lowercase letters and numbers, no symbols
-    const cleaned = value.toLowerCase().replace(/[^a-z0-9]/g, '')
-    setUsername(cleaned)
-
-    // Debounce username check
-    const timeoutId = setTimeout(() => checkUsername(cleaned), 500)
-    return () => clearTimeout(timeoutId)
+    setUsername(normalizeUsernameInput(value))
+    setIsAvailable(null)
   }
 
   const handleSetup = async () => {
+    if (status !== 'authenticated') {
+      toast.error('Please sign in to continue')
+      return
+    }
+
     if (!username || !isAvailable) {
       toast.error('Please choose a valid username')
       return
     }
 
-    // Validate username format
-    if (!/^[a-z][a-z0-9]*[a-z][a-z0-9]*$|^[a-z][a-z0-9]*$/.test(username)) {
-      toast.error('Username must start with a letter, contain at least one letter, and only use lowercase letters and numbers')
+    if (!isValidUsername(username)) {
+      toast.error(USERNAME_VALIDATION_MESSAGE)
       return
     }
 
@@ -71,23 +96,17 @@ export default function Setup() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
       })
+      const data = await response.json().catch(() => null)
 
-      if (response.ok) {
-        const data = await response.json()
-        toast.success('Setup completed successfully!')
-
-        // Force session refresh by calling update with username
-        await updateSession({ username: username })
-
-        // Give some time for the session to update then redirect
-        setTimeout(() => {
-          // Force a hard navigation to ensure middleware sees updated session
-          window.location.href = '/dashboard'
-        }, 1500)
-      } else {
-        const error = await response.json()
-        toast.error(error.message || 'Setup failed')
+      if (!response.ok) {
+        toast.error(data?.error || data?.message || 'Setup failed')
+        return
       }
+
+      toast.success(data?.message || 'Setup completed successfully!')
+      await updateSession({ username })
+      router.replace('/dashboard')
+      router.refresh()
     } catch (error) {
       toast.error('An error occurred during setup')
       console.error('Setup error:', error)
@@ -111,7 +130,7 @@ export default function Setup() {
             </div>
             <CardTitle className="text-2xl font-bold">Choose Your Username</CardTitle>
             <p className="text-muted-foreground">
-              Choose a username that starts with a letter and contains only lowercase letters and numbers
+              Choose a username that starts with a letter and contains only lowercase letters and numbers.
             </p>
           </CardHeader>
 
@@ -121,7 +140,7 @@ export default function Setup() {
               <div className="relative">
                 <Input
                   id="username"
-                  placeholder="your-username"
+                  placeholder="yourusername"
                   value={username}
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   className="pr-10"
@@ -149,7 +168,7 @@ export default function Setup() {
                   </p>
                   {isAvailable === false && (
                     <p className="text-red-600">
-                      This username is already taken
+                      This username is unavailable or invalid
                     </p>
                   )}
                   {isAvailable === true && (
@@ -162,7 +181,6 @@ export default function Setup() {
 
               <div className="text-xs text-muted-foreground">
                 <p>• Must start with a letter</p>
-                <p>• Must contain at least one letter</p>
                 <p>• Only lowercase letters and numbers allowed</p>
                 <p>• No symbols or special characters</p>
               </div>
@@ -170,7 +188,7 @@ export default function Setup() {
 
             <Button
               onClick={handleSetup}
-              disabled={!username || !isAvailable || loading}
+              disabled={!username || !isAvailable || loading || checking || status === 'loading'}
               className="w-full"
               size="lg"
             >

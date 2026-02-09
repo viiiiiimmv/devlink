@@ -2,49 +2,86 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
+import type { OAuthProvider } from '@/models/User'
 import { DEFAULT_PROFILE_TEMPLATE, DEFAULT_PROFILE_THEME, DEFAULT_SECTION_SETTINGS } from '@/lib/profile-customization'
+import { isValidUsername, normalizeUsernameInput, USERNAME_VALIDATION_MESSAGE } from '@/lib/username'
+
+const normalizeEmail = (value: unknown): string =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+const toOAuthProvider = (value: unknown): OAuthProvider | undefined =>
+  value === 'google' || value === 'github' ? value : undefined
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
+    const sessionEmail = normalizeEmail(session?.user?.email)
+
+    if (!sessionEmail) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { username } = await request.json()
+    const body = await request.json().catch(() => null)
+    const username = normalizeUsernameInput(body?.username)
 
     if (!username) {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 })
     }
 
-    // Validate username format
-    if (!/^[a-z][a-z0-9]*[a-z][a-z0-9]*$|^[a-z][a-z0-9]*$/.test(username)) {
-      return NextResponse.json({ 
-        error: 'Username must start with a letter, contain at least one letter, and only use lowercase letters and numbers' 
+    if (!isValidUsername(username)) {
+      return NextResponse.json({
+        error: USERNAME_VALIDATION_MESSAGE,
       }, { status: 400 })
     }
 
-    // Check availability
-    if (!(await db.isUsernameAvailable(username))) {
-      return NextResponse.json({ error: 'Username is already taken' }, { status: 400 })
+    let currentUser = await db.findUser(sessionEmail)
+    if (!currentUser) {
+      const fallbackProvider = toOAuthProvider(session?.user?.provider) ?? 'google'
+      currentUser = await db.upsertOAuthUser({
+        email: sessionEmail,
+        name: session?.user?.name,
+        image: session?.user?.image,
+        provider: fallbackProvider,
+      })
+
+      if (!currentUser) {
+        return NextResponse.json({
+          error: 'Unable to initialize your account. Please sign out and sign in again.',
+        }, { status: 500 })
+      }
     }
 
-    // Update user with username
-    const updatedUser = await db.updateUser(session.user.email, { username })
-    
-    if (!updatedUser) {
-      return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
+    const alreadyOwnsUsername = currentUser.username === username
+
+    if (!alreadyOwnsUsername) {
+      if (!(await db.isUsernameAvailable(username))) {
+        return NextResponse.json({ error: 'Username is already taken' }, { status: 409 })
+      }
+
+      const updatedUser = await db.updateUser(sessionEmail, { username })
+
+      if (!updatedUser) {
+        const refreshedUser = await db.findUser(sessionEmail)
+        if (!refreshedUser || refreshedUser.username !== username) {
+          return NextResponse.json({ error: 'Failed to update user profile' }, { status: 500 })
+        }
+        currentUser = refreshedUser
+      } else {
+        currentUser = updatedUser
+      }
     }
 
-    // Check if profile already exists
     const existingProfile = await db.findProfile(username)
+
+    if (existingProfile && existingProfile.userId !== currentUser._id) {
+      return NextResponse.json({ error: 'Username is already taken' }, { status: 409 })
+    }
+
     if (!existingProfile) {
-      // Create initial profile
       const profile = {
-        userId: updatedUser._id,
+        userId: currentUser._id,
         username,
-        name: updatedUser.name,
+        name: currentUser.name,
         bio: '',
         skills: [],
         socialLinks: {},
@@ -63,17 +100,13 @@ export async function POST(request: NextRequest) {
       if (!createdProfile) {
         return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
       }
-      console.log('Profile created successfully for user:', username)
-    } else {
-      console.log('Profile already exists for user:', username)
     }
 
-    // Return the updated user data so the client can update the session
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       username,
-      user: updatedUser,
-      message: 'Profile setup completed successfully'
+      user: currentUser,
+      message: 'Profile setup completed successfully',
     })
   } catch (error) {
     console.error('Setup error:', error)

@@ -11,9 +11,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import DashboardLayout from '@/components/dashboard/layout'
 import toast from 'react-hot-toast'
+import { isValidUsername, normalizeUsernameInput, USERNAME_VALIDATION_MESSAGE } from '@/lib/username'
 
 export default function SettingsPage() {
-  const { data: session, update: updateSession } = useSession()
+  const { update: updateSession } = useSession()
   const router = useRouter()
   const [username, setUsername] = useState('')
   const [profileData, setProfileData] = useState<Profile | null>(null)
@@ -30,38 +31,56 @@ export default function SettingsPage() {
     fetchSettings()
   }, [])
 
-  const checkUsernameAvailability = async (value: string) => {
-    if (!value || value.length < 3 || value === (profileData?.username ?? '')) {
+  useEffect(() => {
+    if (!profileData) {
+      return
+    }
+
+    if (!username || username === profileData.username) {
       setUsernameAvailable(null)
       return
     }
 
-    setCheckingUsername(true)
-    try {
-      const response = await fetch('/api/username/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: value })
-      })
-
-      const data = await response.json()
-      setUsernameAvailable(data.available)
-    } catch (error) {
-      console.error('Error checking username:', error)
+    if (!isValidUsername(username)) {
       setUsernameAvailable(null)
-    } finally {
-      setCheckingUsername(false)
+      return
     }
-  }
+
+    let active = true
+    const timeoutId = setTimeout(async () => {
+      setCheckingUsername(true)
+      try {
+        const response = await fetch('/api/username/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username }),
+        })
+
+        const data = await response.json()
+        if (active) {
+          setUsernameAvailable(Boolean(data?.available))
+        }
+      } catch (error) {
+        if (active) {
+          setUsernameAvailable(null)
+        }
+        console.error('Error checking username:', error)
+      } finally {
+        if (active) {
+          setCheckingUsername(false)
+        }
+      }
+    }, 350)
+
+    return () => {
+      active = false
+      clearTimeout(timeoutId)
+    }
+  }, [username, profileData])
 
   const handleUsernameChange = (value: string) => {
-    // Clean username: only lowercase letters and numbers, no symbols
-    const cleaned = value.toLowerCase().replace(/[^a-z0-9]/g, '')
-    setUsername(cleaned)
-
-    // Debounce username check
-    const timeoutId = setTimeout(() => checkUsernameAvailability(cleaned), 500)
-    return () => clearTimeout(timeoutId)
+    setUsername(normalizeUsernameInput(value))
+    setUsernameAvailable(null)
   }
 
   const fetchSettings = async () => {
@@ -80,27 +99,26 @@ export default function SettingsPage() {
   }
 
   const handleUpdateUsername = async () => {
-    if (!username || username === profileData?.username) {
+    const normalizedUsername = normalizeUsernameInput(username)
+    if (!normalizedUsername || normalizedUsername === profileData?.username) {
       return
     }
 
-    // Validate username format
-    if (!/^[a-z][a-z0-9]*[a-z][a-z0-9]*$|^[a-z][a-z0-9]*$/.test(username)) {
-      toast.error('Username must start with a letter, contain at least one letter, and only use lowercase letters and numbers')
+    if (!isValidUsername(normalizedUsername)) {
+      toast.error(USERNAME_VALIDATION_MESSAGE)
       return
     }
 
-    // Check if username is available
     try {
       const checkResponse = await fetch('/api/username/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username })
+        body: JSON.stringify({ username: normalizedUsername })
       })
 
       const checkData = await checkResponse.json()
       if (!checkData.available) {
-        toast.error('Username is already taken')
+        toast.error(checkData?.message || 'Username is already taken')
         return
       }
     } catch (error) {
@@ -108,8 +126,8 @@ export default function SettingsPage() {
       return
     }
 
-    // Show confirmation modal
-    setNewUsername(username)
+    setNewUsername(normalizedUsername)
+    setUsername(normalizedUsername)
     setShowUsernameConfirm(true)
   }
 
@@ -145,13 +163,7 @@ export default function SettingsPage() {
         setUsername(newUsername)
 
         // Update session to reflect new username
-        await updateSession({
-          ...session,
-          user: {
-            ...session?.user,
-            username: newUsername
-          }
-        })
+        await updateSession({ username: newUsername })
 
         // Close modal
         setShowUsernameConfirm(false)
@@ -236,7 +248,7 @@ export default function SettingsPage() {
                       value={username}
                       onChange={(e) => handleUsernameChange(e.target.value)}
                       className="pr-10"
-                      placeholder="your-username"
+                      placeholder="yourusername"
                     />
                     {checkingUsername && (
                       <div className="absolute right-3 top-3">
@@ -252,7 +264,7 @@ export default function SettingsPage() {
                   </div>
                   <Button
                     onClick={handleUpdateUsername}
-                    disabled={!username || username === profileData?.username || updatingUsername || usernameAvailable === false}
+                    disabled={!username || username === profileData?.username || updatingUsername || checkingUsername || usernameAvailable === false}
                     size="sm"
                   >
                     {updatingUsername ? (
@@ -286,7 +298,6 @@ export default function SettingsPage() {
 
                 <div className="text-xs text-muted-foreground mt-2">
                   <p>• Must start with a letter</p>
-                  <p>• Must contain at least one letter</p>
                   <p>• Only lowercase letters and numbers allowed</p>
                   <p>• No symbols or special characters</p>
                 </div>

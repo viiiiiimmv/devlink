@@ -228,18 +228,16 @@ const ProfileSchema = new Schema<IProfile>({
     required: true,
     lowercase: true,
     trim: true,
-    match: /^[a-z][a-z0-9]*[a-z][a-z0-9]*$|^[a-z][a-z0-9]*$/,
+    match: /^[a-z][a-z0-9]*$/,
     validate: {
       validator: function(v: string) {
         // Must start with a letter
         if (!/^[a-z]/.test(v)) return false
-        // Must contain at least one letter
-        if (!/[a-z]/.test(v)) return false
         // Only lowercase letters and numbers allowed
         if (!/^[a-z0-9]+$/.test(v)) return false
         return true
       },
-      message: 'Username must start with a letter, contain at least one letter, and only use lowercase letters and numbers'
+      message: 'Username must start with a letter and only use lowercase letters and numbers'
     }
   },
   name: {
