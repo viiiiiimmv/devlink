@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { v2 as cloudinary } from 'cloudinary'
 import { revalidatePath } from 'next/cache'
 import { isValidUsername, normalizeUsernameInput, USERNAME_VALIDATION_MESSAGE } from '@/lib/username'
+import { logActivity } from '@/lib/activity'
 
 // Configure Cloudinary
 cloudinary.config({
@@ -68,6 +69,28 @@ export async function PUT(request: NextRequest) {
     if (!updatedProfile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
+
+    const fieldLabels: string[] = []
+    if (Object.prototype.hasOwnProperty.call(updates, 'name')) fieldLabels.push('name')
+    if (Object.prototype.hasOwnProperty.call(updates, 'bio')) fieldLabels.push('bio')
+    if (Object.prototype.hasOwnProperty.call(updates, 'skills')) fieldLabels.push('skills')
+    if (Object.prototype.hasOwnProperty.call(updates, 'socialLinks')) fieldLabels.push('social links')
+    if (Object.prototype.hasOwnProperty.call(updates, 'theme')) fieldLabels.push('theme')
+    if (Object.prototype.hasOwnProperty.call(updates, 'template')) fieldLabels.push('template')
+    if (Object.prototype.hasOwnProperty.call(updates, 'sectionSettings')) fieldLabels.push('sections')
+    if (Object.prototype.hasOwnProperty.call(updates, 'contactCta')) fieldLabels.push('contact card')
+    if (Object.prototype.hasOwnProperty.call(updates, 'customTheme')) fieldLabels.push('custom colors')
+
+    const message = fieldLabels.length > 0
+      ? `Updated ${fieldLabels.slice(0, 3).join(', ')}${fieldLabels.length > 3 ? ' and more' : ''}`
+      : 'Updated profile'
+
+    await logActivity({
+      username: updatedProfile.username,
+      userId: updatedProfile.userId,
+      type: 'profile_update',
+      message,
+    })
 
     return NextResponse.json(updatedProfile)
   } catch (error) {
@@ -194,6 +217,12 @@ export async function PATCH(request: NextRequest) {
       revalidatePath(`/${oldUsername}`);
     }
     revalidatePath(`/${newUsername}`);
+
+    await logActivity({
+      username: newUsername,
+      type: 'username_update',
+      message: 'Updated portfolio username',
+    })
 
     return NextResponse.json({ 
       success: true, 

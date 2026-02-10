@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { v4 as uuidv4 } from 'uuid'
+import { logActivity } from '@/lib/activity'
 
 // GET - Fetch all certifications for the authenticated user
 export async function GET(request: NextRequest) {
@@ -71,6 +72,14 @@ export async function POST(request: NextRequest) {
     await db.updateProfile(username, {
       certifications: updatedCertifications
     })
+
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'certification_added',
+      message: `Added certification: ${newCertification.name}`,
+      metadata: { certificationId: newCertification.id },
+    })
     return NextResponse.json({ certification: newCertification }, { status: 201 })
   } catch (error) {
     console.error('Certification creation error:', error)
@@ -122,6 +131,14 @@ export async function PUT(request: NextRequest) {
     await db.updateProfile(username, {
       certifications: updatedCertifications
     })
+
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'certification_updated',
+      message: `Updated certification: ${updatedCertification.name}`,
+      metadata: { certificationId: id },
+    })
     return NextResponse.json({ certification: updatedCertification })
   } catch (error) {
     console.error('Certification update error:', error)
@@ -158,6 +175,17 @@ export async function DELETE(request: NextRequest) {
     await db.updateProfile(username, {
       certifications: updatedCertifications
     })
+
+    const deletedCertification = profile.certifications?.find(cert => cert.id === certificationId)
+    if (deletedCertification) {
+      await logActivity({
+        username,
+        userId: profile.userId,
+        type: 'certification_deleted',
+        message: `Removed certification: ${deletedCertification.name}`,
+        metadata: { certificationId },
+      })
+    }
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Certification deletion error:', error)

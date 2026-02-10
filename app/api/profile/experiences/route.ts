@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { v4 as uuidv4 } from 'uuid'
+import { logActivity } from '@/lib/activity'
 
 // GET - Fetch all experiences for the authenticated user
 export async function GET(request: NextRequest) {
@@ -89,6 +90,14 @@ export async function POST(request: NextRequest) {
       experiences: updatedExperiences
     })
 
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'experience_added',
+      message: `Added experience: ${newExperience.position} @ ${newExperience.company}`,
+      metadata: { experienceId: newExperience.id },
+    })
+
     return NextResponse.json({ experience: newExperience }, { status: 201 })
   } catch (error) {
     console.error('Experience creation error:', error)
@@ -158,6 +167,14 @@ export async function PUT(request: NextRequest) {
       experiences: updatedExperiences
     })
 
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'experience_updated',
+      message: `Updated experience: ${updatedExperience.position} @ ${updatedExperience.company}`,
+      metadata: { experienceId: id },
+    })
+
     return NextResponse.json({ experience: updatedExperience })
   } catch (error) {
     console.error('Experience update error:', error)
@@ -199,6 +216,17 @@ export async function DELETE(request: NextRequest) {
     await db.updateProfile(username, {
       experiences: updatedExperiences
     })
+
+    const deletedExperience = profile.experiences?.find(experience => experience.id === experienceId)
+    if (deletedExperience) {
+      await logActivity({
+        username,
+        userId: profile.userId,
+        type: 'experience_deleted',
+        message: `Removed experience: ${deletedExperience.position} @ ${deletedExperience.company}`,
+        metadata: { experienceId },
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

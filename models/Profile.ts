@@ -107,6 +107,8 @@ export interface IProfile extends Document {
   isPublished: boolean
   customTheme: ICustomTheme
   contactCta: IContactCta
+  lastPublishedAt?: Date
+  lastPublishedSnapshot?: IProfilePublishSnapshot
   sectionSettings: IProfileSectionSetting[]
   projects: IProject[]
   experiences: IExperience[]
@@ -115,6 +117,21 @@ export interface IProfile extends Document {
   testimonials: ITestimonial[]
   createdAt: Date
   updatedAt: Date
+}
+
+export interface IProfilePublishSnapshot {
+  name: string
+  bio: string
+  skillsCount: number
+  projectsCount: number
+  experiencesCount: number
+  certificationsCount: number
+  researchesCount: number
+  testimonialsCount: number
+  socialLinksCount: number
+  hasPhoto: boolean
+  theme: string
+  template: string
 }
 
 const ProjectSchema = new Schema({
@@ -242,6 +259,21 @@ const ContactCtaSchema = new Schema({
   },
 }, { _id: false })
 
+const PublishSnapshotSchema = new Schema({
+  name: { type: String, trim: true, default: '' },
+  bio: { type: String, trim: true, default: '' },
+  skillsCount: { type: Number, default: 0 },
+  projectsCount: { type: Number, default: 0 },
+  experiencesCount: { type: Number, default: 0 },
+  certificationsCount: { type: Number, default: 0 },
+  researchesCount: { type: Number, default: 0 },
+  testimonialsCount: { type: Number, default: 0 },
+  socialLinksCount: { type: Number, default: 0 },
+  hasPhoto: { type: Boolean, default: false },
+  theme: { type: String, default: DEFAULT_PROFILE_THEME },
+  template: { type: String, default: DEFAULT_PROFILE_TEMPLATE },
+}, { _id: false })
+
 const ProfileSchema = new Schema<IProfile>({
   userId: {
     type: String,
@@ -305,6 +337,12 @@ const ProfileSchema = new Schema<IProfile>({
   isPublished: {
     type: Boolean,
     default: true,
+  },
+  lastPublishedAt: {
+    type: Date,
+  },
+  lastPublishedSnapshot: {
+    type: PublishSnapshotSchema,
   },
   customTheme: {
     type: CustomThemeSchema,

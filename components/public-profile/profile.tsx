@@ -5,7 +5,7 @@ import { Github, Linkedin, Twitter, Globe, ExternalLink, Calendar, Award, ArrowU
 import { themes } from '@/lib/themes'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { normalizeSectionSettings, type ProfileSectionId } from '@/lib/profile-customization'
 import ShareProfile from '@/components/ShareProfile'
 import MarkdownContent from '@/components/MarkdownContent'
@@ -109,12 +109,14 @@ interface PublicProfileProps {
   profile: Profile
   showSignature?: boolean
   showSharePanel?: boolean
+  trackAnalytics?: boolean
 }
 
 export default function PublicProfile({
   profile,
   showSignature = false,
   showSharePanel = true,
+  trackAnalytics = true,
 }: PublicProfileProps) {
   // Ensure all required properties exist with fallbacks
   const safeProfile = {
@@ -154,6 +156,52 @@ export default function PublicProfile({
   })()
 
   const currentTheme = themes[safeProfile.theme as keyof typeof themes] || themes.modern
+
+  const analyticsUsername = safeProfile.username
+  const analyticsEnabled = trackAnalytics && typeof analyticsUsername === 'string' && analyticsUsername.trim().length > 0
+
+  const sendAnalyticsEvent = useCallback((payload: Record<string, any>) => {
+    if (!analyticsEnabled) return
+    if (typeof window === 'undefined') return
+    const data = JSON.stringify({
+      username: analyticsUsername,
+      referrer: document.referrer || '',
+      path: window.location.pathname,
+      ...payload,
+    })
+
+    if (navigator.sendBeacon) {
+      const blob = new Blob([data], { type: 'application/json' })
+      navigator.sendBeacon('/api/analytics', blob)
+      return
+    }
+
+    fetch('/api/analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: data,
+      keepalive: true,
+    }).catch(() => undefined)
+  }, [analyticsEnabled, analyticsUsername])
+
+  useEffect(() => {
+    if (!analyticsEnabled) return
+    const storageKey = `devlink:view:${analyticsUsername}:${new Date().toISOString().slice(0, 10)}`
+    if (typeof window === 'undefined') return
+    if (window.localStorage.getItem(storageKey)) return
+    window.localStorage.setItem(storageKey, '1')
+    sendAnalyticsEvent({ eventType: 'view' })
+  }, [analyticsEnabled, analyticsUsername, sendAnalyticsEvent])
+
+  const handleProjectClick = (project: Project, linkType: 'github' | 'live') => {
+    sendAnalyticsEvent({
+      eventType: 'project_click',
+      projectId: project.id,
+      projectTitle: project.title,
+      linkType,
+      url: linkType === 'github' ? project.githubUrl : project.liveUrl,
+    })
+  }
 
   // Memoize current year to prevent hydration mismatch
   const currentYear = useMemo(() => new Date().getUTCFullYear(), [])
@@ -409,6 +457,14 @@ export default function PublicProfile({
       'Open to freelance, full-time roles, and collaboration opportunities.'
     const buttonLabel = safeProfile.contactCta.buttonLabel.trim() || 'Contact me'
     const openInNewTab = /^https?:\/\//i.test(contactHref)
+    const inquiryHref = safeProfile.username ? `/contact/${safeProfile.username}` : ''
+    const renderInquiryLink = (className: string) => (
+      inquiryHref ? (
+        <Link href={inquiryHref} className={className}>
+          Send message
+        </Link>
+      ) : null
+    )
 
     if (variant === 'terminal') {
       return (
@@ -417,16 +473,19 @@ export default function PublicProfile({
           <div className="mt-3 rounded-xl border border-white/10 bg-zinc-950/70 p-4">
             <p className="text-sm font-semibold text-white">{title}</p>
             <p className="mt-1 text-sm text-zinc-300">{description}</p>
-            <Link
-              href={contactHref}
-              target={openInNewTab ? '_blank' : undefined}
-              rel={openInNewTab ? 'noopener noreferrer' : undefined}
-              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs uppercase tracking-[0.2em] hover:border-white/40 transition-colors"
-              style={{ color: themeColors.secondary }}
-            >
-              {buttonLabel}
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Link
+                href={contactHref}
+                target={openInNewTab ? '_blank' : undefined}
+                rel={openInNewTab ? 'noopener noreferrer' : undefined}
+                className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs uppercase tracking-[0.2em] hover:border-white/40 transition-colors"
+                style={{ color: themeColors.secondary }}
+              >
+                {buttonLabel}
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+              {renderInquiryLink('text-xs uppercase tracking-[0.2em] text-zinc-400 hover:text-zinc-200 transition-colors')}
+            </div>
           </div>
         </section>
       )
@@ -437,15 +496,18 @@ export default function PublicProfile({
         <section className="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl p-6">
           <h2 className="text-xl font-bold">{title}</h2>
           <p className="mt-2 text-sm text-white/80">{description}</p>
-          <Link
-            href={contactHref}
-            target={openInNewTab ? '_blank' : undefined}
-            rel={openInNewTab ? 'noopener noreferrer' : undefined}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-4 py-2 text-sm font-semibold hover:border-white/50 transition-colors"
-          >
-            {buttonLabel}
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link
+              href={contactHref}
+              target={openInNewTab ? '_blank' : undefined}
+              rel={openInNewTab ? 'noopener noreferrer' : undefined}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-4 py-2 text-sm font-semibold hover:border-white/50 transition-colors"
+            >
+              {buttonLabel}
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
+            {renderInquiryLink('text-xs uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors')}
+          </div>
         </section>
       )
     }
@@ -459,16 +521,19 @@ export default function PublicProfile({
               <h2 className="mt-2 text-2xl font-black">{title}</h2>
               <p className="mt-2 text-sm text-slate-300">{description}</p>
             </div>
-            <Link
-              href={contactHref}
-              target={openInNewTab ? '_blank' : undefined}
-              rel={openInNewTab ? 'noopener noreferrer' : undefined}
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ background: themeColors.gradient }}
-            >
-              {buttonLabel}
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href={contactHref}
+                target={openInNewTab ? '_blank' : undefined}
+                rel={openInNewTab ? 'noopener noreferrer' : undefined}
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ background: themeColors.gradient }}
+              >
+                {buttonLabel}
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+              {renderInquiryLink('text-xs uppercase tracking-[0.2em] text-slate-300 hover:text-white transition-colors')}
+            </div>
           </div>
         </section>
       )
@@ -483,16 +548,19 @@ export default function PublicProfile({
                 <h2 className="text-3xl font-black">{title}</h2>
                 <p className="mt-2 text-gray-300 max-w-2xl">{description}</p>
               </div>
-              <Link
-                href={contactHref}
-                target={openInNewTab ? '_blank' : undefined}
-                rel={openInNewTab ? 'noopener noreferrer' : undefined}
-                className="group inline-flex items-center gap-2 px-5 py-3 border-2 text-sm font-bold uppercase tracking-[0.16em] transition-colors"
-                style={{ borderColor: themeColors.primary, color: themeColors.primary }}
-              >
-                {buttonLabel}
-                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href={contactHref}
+                  target={openInNewTab ? '_blank' : undefined}
+                  rel={openInNewTab ? 'noopener noreferrer' : undefined}
+                  className="group inline-flex items-center gap-2 px-5 py-3 border-2 text-sm font-bold uppercase tracking-[0.16em] transition-colors"
+                  style={{ borderColor: themeColors.primary, color: themeColors.primary }}
+                >
+                  {buttonLabel}
+                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+                {renderInquiryLink('text-xs uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors')}
+              </div>
             </div>
           </div>
         </div>
@@ -831,12 +899,26 @@ export default function PublicProfile({
                         </p>
                         <div className="mt-3 flex flex-wrap gap-4 text-xs">
                           {project.githubUrl && (
-                            <Link href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: themeColors.secondary }}>
+                            <Link
+                              href={project.githubUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                              style={{ color: themeColors.secondary }}
+                              onClick={() => handleProjectClick(project, 'github')}
+                            >
                               open github
                             </Link>
                           )}
                           {project.liveUrl && (
-                            <Link href={project.liveUrl} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: themeColors.primary }}>
+                            <Link
+                              href={project.liveUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                              style={{ color: themeColors.primary }}
+                              onClick={() => handleProjectClick(project, 'live')}
+                            >
                               open live
                             </Link>
                           )}
@@ -1692,6 +1774,7 @@ export default function PublicProfile({
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="group/link flex items-center gap-2 text-white transition-colors"
+                                            onClick={() => handleProjectClick(project, 'github')}
                                             onMouseEnter={(e) => {
                                               e.currentTarget.style.color = themeColors.primary
                                             }}
@@ -1710,6 +1793,7 @@ export default function PublicProfile({
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="group/link flex items-center gap-2 text-white transition-colors"
+                                            onClick={() => handleProjectClick(project, 'live')}
                                             onMouseEnter={(e) => {
                                               e.currentTarget.style.color = themeColors.secondary
                                             }}

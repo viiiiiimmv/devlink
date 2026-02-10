@@ -19,5 +19,5 @@ export default function PortfolioLivePreview({ profile, themeId, templateId }: P
   }
   // Override selected customisation for preview
   const previewProfile = { ...profile, theme: themeId, template: templateId ?? profile.template };
-  return <PublicProfile profile={previewProfile} showSharePanel={false} />;
+  return <PublicProfile profile={previewProfile} showSharePanel={false} trackAnalytics={false} />;
 }

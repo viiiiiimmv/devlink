@@ -164,7 +164,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           __html: JSON.stringify(structuredData),
         }}
       />
-      <PublicProfile profile={fixedProfile} showSignature />
+      <PublicProfile profile={fixedProfile} showSignature trackAnalytics={!canViewUnpublished} />
     </>
   )
 }

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { v4 as uuidv4 } from 'uuid'
 import { revalidatePath } from 'next/cache'
+import { logActivity } from '@/lib/activity'
 
 // GET - Fetch all projects for the authenticated user
 export async function GET(request: NextRequest) {
@@ -83,6 +84,14 @@ export async function POST(request: NextRequest) {
     // Revalidate the profile page to ensure fresh data is shown
     revalidatePath(`/${username}`)
 
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'project_added',
+      message: `Added project: ${newProject.title}`,
+      metadata: { projectId: newProject.id },
+    })
+
     return NextResponse.json({ project: newProject }, { status: 201 })
   } catch (error) {
     console.error('Project creation error:', error)
@@ -123,6 +132,17 @@ export async function PUT(request: NextRequest) {
 
     // Revalidate the profile page to ensure fresh data is shown
     revalidatePath(`/${username}`)
+
+    const updatedProject = updatedProjects.find(project => project.id === id)
+    if (updatedProject) {
+      await logActivity({
+        username,
+        userId: profile.userId,
+        type: 'project_updated',
+        message: `Updated project: ${updatedProject.title}`,
+        metadata: { projectId: id },
+      })
+    }
 
     return NextResponse.json(updatedProfile)
   } catch (error) {
@@ -167,6 +187,17 @@ export async function DELETE(request: NextRequest) {
 
     // Revalidate the profile page to ensure fresh data is shown
     revalidatePath(`/${username}`)
+
+    const deletedProject = profile.projects.find(project => project.id === projectId)
+    if (deletedProject) {
+      await logActivity({
+        username,
+        userId: profile.userId,
+        type: 'project_deleted',
+        message: `Removed project: ${deletedProject.title}`,
+        metadata: { projectId },
+      })
+    }
 
     return NextResponse.json(updatedProfile)
   } catch (error) {

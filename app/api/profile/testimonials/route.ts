@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { v4 as uuidv4 } from 'uuid'
+import { logActivity } from '@/lib/activity'
 
 const getUsernameFromSession = async (session: any): Promise<string | undefined> => {
   if (session && session.user) {
@@ -71,6 +72,14 @@ export async function POST(request: NextRequest) {
     const updatedTestimonials = [...(profile.testimonials || []), newTestimonial]
     await db.updateProfile(username, { testimonials: updatedTestimonials })
 
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'testimonial_added',
+      message: `Added testimonial from ${newTestimonial.name}`,
+      metadata: { testimonialId: newTestimonial.id },
+    })
+
     return NextResponse.json({ testimonial: newTestimonial }, { status: 201 })
   } catch (error) {
     console.error('Testimonial creation error:', error)
@@ -117,6 +126,14 @@ export async function PUT(request: NextRequest) {
 
     await db.updateProfile(username, { testimonials: updatedTestimonials })
 
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'testimonial_updated',
+      message: `Updated testimonial from ${updatedTestimonials[index].name}`,
+      metadata: { testimonialId: id },
+    })
+
     return NextResponse.json({ testimonial: updatedTestimonials[index] })
   } catch (error) {
     console.error('Testimonial update error:', error)
@@ -145,6 +162,17 @@ export async function DELETE(request: NextRequest) {
 
     const updatedTestimonials = profile.testimonials?.filter((item) => item.id !== testimonialId) || []
     await db.updateProfile(username, { testimonials: updatedTestimonials })
+
+    const deletedTestimonial = profile.testimonials?.find((item) => item.id === testimonialId)
+    if (deletedTestimonial) {
+      await logActivity({
+        username,
+        userId: profile.userId,
+        type: 'testimonial_deleted',
+        message: `Removed testimonial from ${deletedTestimonial.name}`,
+        metadata: { testimonialId },
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

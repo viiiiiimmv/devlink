@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { v4 as uuidv4 } from 'uuid'
+import { logActivity } from '@/lib/activity'
 
 export async function GET(request: NextRequest) {
   try {
@@ -82,6 +83,14 @@ export async function POST(request: NextRequest) {
       researches: updatedResearches
     })
 
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'research_added',
+      message: `Added research: ${newResearch.title}`,
+      metadata: { researchId: newResearch.id },
+    })
+
     return NextResponse.json({ research: newResearch }, { status: 201 })
   } catch (error) {
     console.error('Research paper creation error:', error)
@@ -145,6 +154,14 @@ export async function PUT(request: NextRequest) {
       researches: updatedResearches
     })
 
+    await logActivity({
+      username,
+      userId: profile.userId,
+      type: 'research_updated',
+      message: `Updated research: ${updatedResearch.title}`,
+      metadata: { researchId: id },
+    })
+
     return NextResponse.json({ research: updatedResearch })
   } catch (error) {
     console.error('Research paper update error:', error)
@@ -186,6 +203,17 @@ export async function DELETE(request: NextRequest) {
     await db.updateProfile(username, {
       researches: updatedResearches
     })
+
+    const deletedResearch = profile.researches?.find(research => research.id === researchID)
+    if (deletedResearch) {
+      await logActivity({
+        username,
+        userId: profile.userId,
+        type: 'research_deleted',
+        message: `Removed research: ${deletedResearch.title}`,
+        metadata: { researchId: researchID },
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
