@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { Plus, Edit, Trash2, Briefcase, Calendar, Linkedin } from 'lucide-react'
+import { Plus, Edit, Trash2, Briefcase, Calendar, Linkedin, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,11 +23,12 @@ interface Experience {
 }
 
 export default function ExperiencePage() {
-  const { data: session } = useSession()
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingExperience, setEditingExperience] = useState<Experience | undefined>(undefined)
+  const [draggedExperienceId, setDraggedExperienceId] = useState<string | null>(null)
+  const [savingOrder, setSavingOrder] = useState(false)
 
   useEffect(() => {
     fetchExperiences()
@@ -113,6 +113,42 @@ export default function ExperiencePage() {
     fetchExperiences()
   }
 
+  const persistExperienceOrder = async (nextExperiences: Experience[], previousExperiences: Experience[]) => {
+    setSavingOrder(true)
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ experiences: nextExperiences }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to save experience order')
+      }
+      toast.success('Experience order updated!')
+    } catch (error) {
+      console.error('Error updating experience order:', error)
+      setExperiences(previousExperiences)
+      toast.error('Failed to update experience order')
+    } finally {
+      setSavingOrder(false)
+    }
+  }
+
+  const handleReorder = (targetId: string) => {
+    if (!draggedExperienceId || draggedExperienceId === targetId) return
+
+    const previousExperiences = [...experiences]
+    const fromIndex = experiences.findIndex((experience) => experience.id === draggedExperienceId)
+    const toIndex = experiences.findIndex((experience) => experience.id === targetId)
+    if (fromIndex < 0 || toIndex < 0) return
+
+    const nextExperiences = [...experiences]
+    const [moved] = nextExperiences.splice(fromIndex, 1)
+    nextExperiences.splice(toIndex, 0, moved)
+    setExperiences(nextExperiences)
+    persistExperienceOrder(nextExperiences, previousExperiences)
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -166,7 +202,13 @@ export default function ExperiencePage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="hover:shadow-md transition-shadow">
+                <Card
+                  className={`hover:shadow-md transition-shadow ${savingOrder && draggedExperienceId ? 'opacity-80' : ''}`}
+                  onDragOver={(event) => {
+                    event.preventDefault()
+                  }}
+                  onDrop={() => handleReorder(experience.id)}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
@@ -185,6 +227,16 @@ export default function ExperiencePage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+                          draggable
+                          onDragStart={() => setDraggedExperienceId(experience.id)}
+                          onDragEnd={() => setDraggedExperienceId(null)}
+                          aria-label="Drag to reorder experience"
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </button>
                         <Button 
                           variant="ghost" 
                           size="sm"

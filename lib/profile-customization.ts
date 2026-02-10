@@ -36,6 +36,7 @@ export const PROFILE_SECTION_SEQUENCE = [
   'skills',
   'projects',
   'experience',
+  'testimonials',
   'certifications',
   'research',
 ] as const
@@ -262,6 +263,11 @@ export const sectionOptions: Array<{
     id: 'experience',
     name: 'Experience',
     description: 'Roles and professional timeline',
+  },
+  {
+    id: 'testimonials',
+    name: 'Testimonials',
+    description: 'Recommendations and social proof',
   },
   {
     id: 'certifications',

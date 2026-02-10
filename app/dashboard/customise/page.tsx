@@ -222,6 +222,7 @@ export default function CustomisePage() {
       experiences: [],
       certifications: [],
       researches: [],
+      testimonials: [],
     }),
     [customTheme, isPublished, sectionSettings, selectedTheme, selectedTemplate]
   )

@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import DashboardLayout from '@/components/dashboard/layout'
 import PhotoUpload from '@/components/PhotoUpload'
+import MarkdownEditor from '@/components/MarkdownEditor'
 import toast from 'react-hot-toast'
 import { POPULAR_TECH_SKILLS } from '@/lib/popular-tech-skills'
 
@@ -260,12 +261,11 @@ export default function ProfilePage() {
 
               <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
+                <MarkdownEditor
                   value={profile.bio}
-                  onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
-                  placeholder="Tell us about yourself..."
-                  rows={4}
+                  onChange={(value) => setProfile(prev => ({ ...prev, bio: value }))}
+                  placeholder="Tell us about yourself... (Markdown supported)"
+                  rows={6}
                   maxLength={500}
                 />
                 <p className="text-sm text-muted-foreground">

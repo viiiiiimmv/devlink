@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import MarkdownEditor from '@/components/MarkdownEditor'
 import toast from 'react-hot-toast'
 
 interface ResearchPost {
@@ -133,13 +133,11 @@ export default function ResearchFormModal({
           {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
+            <MarkdownEditor
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description or summary of the research paper"
-              rows={3}
-              required
+              onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+              placeholder="Brief description or summary of the research paper (Markdown supported)"
+              rows={4}
             />
           </div>
 

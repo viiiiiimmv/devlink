@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
         experiences: [],
         certifications: [],
         researches: [],
+        testimonials: [],
         createdAt: new Date(),
         updatedAt: new Date(),
       }

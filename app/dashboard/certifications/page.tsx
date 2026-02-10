@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { Plus, Edit, Trash2, Award, ExternalLink, Calendar } from 'lucide-react'
+import { Plus, Edit, Trash2, Award, ExternalLink, Calendar, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -21,11 +20,12 @@ interface Certification {
 }
 
 export default function CertificationsPage() {
-  const { data: session } = useSession()
   const [certifications, setCertifications] = useState<Certification[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCertification, setEditingCertification] = useState<Certification | undefined>(undefined)
+  const [draggedCertificationId, setDraggedCertificationId] = useState<string | null>(null)
+  const [savingOrder, setSavingOrder] = useState(false)
 
   useEffect(() => {
     fetchCertifications()
@@ -86,6 +86,42 @@ export default function CertificationsPage() {
     fetchCertifications()
   }
 
+  const persistCertificationOrder = async (nextCertifications: Certification[], previousCertifications: Certification[]) => {
+    setSavingOrder(true)
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ certifications: nextCertifications }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to save certification order')
+      }
+      toast.success('Certification order updated!')
+    } catch (error) {
+      console.error('Error updating certification order:', error)
+      setCertifications(previousCertifications)
+      toast.error('Failed to update certification order')
+    } finally {
+      setSavingOrder(false)
+    }
+  }
+
+  const handleReorder = (targetId: string) => {
+    if (!draggedCertificationId || draggedCertificationId === targetId) return
+
+    const previousCertifications = [...certifications]
+    const fromIndex = certifications.findIndex((cert) => cert.id === draggedCertificationId)
+    const toIndex = certifications.findIndex((cert) => cert.id === targetId)
+    if (fromIndex < 0 || toIndex < 0) return
+
+    const nextCertifications = [...certifications]
+    const [moved] = nextCertifications.splice(fromIndex, 1)
+    nextCertifications.splice(toIndex, 0, moved)
+    setCertifications(nextCertifications)
+    persistCertificationOrder(nextCertifications, previousCertifications)
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -139,7 +175,13 @@ export default function CertificationsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="h-full hover:shadow-lg transition-shadow">
+                <Card
+                  className={`h-full hover:shadow-lg transition-shadow ${savingOrder && draggedCertificationId ? 'opacity-80' : ''}`}
+                  onDragOver={(event) => {
+                    event.preventDefault()
+                  }}
+                  onDrop={() => handleReorder(certification.id)}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
@@ -156,6 +198,16 @@ export default function CertificationsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+                          draggable
+                          onDragStart={() => setDraggedCertificationId(certification.id)}
+                          onDragEnd={() => setDraggedCertificationId(null)}
+                          aria-label="Drag to reorder certification"
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </button>
                         <Button 
                           variant="ghost" 
                           size="sm"

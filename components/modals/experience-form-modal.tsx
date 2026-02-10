@@ -5,7 +5,6 @@ import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import MonthYearPicker from '@/components/MonthYearPicker'
@@ -16,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import MarkdownEditor from '@/components/MarkdownEditor'
 import toast from 'react-hot-toast'
 
 interface Experience {
@@ -217,13 +217,11 @@ export default function ExperienceFormModal({
           {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
+            <MarkdownEditor
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Describe your role, responsibilities, and achievements..."
-              rows={4}
-              required
+              onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+              placeholder="Describe your role, responsibilities, and achievements... (Markdown supported)"
+              rows={5}
             />
           </div>
 

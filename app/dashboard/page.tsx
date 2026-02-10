@@ -34,6 +34,7 @@ interface Profile {
   experiences: any[]
   certifications: any[]
   researches: any[]
+  testimonials?: any[]
   theme: string
   template?: string
   isPublished?: boolean
@@ -105,6 +106,7 @@ export default function Dashboard() {
     { label: 'Experiences', value: profile.experiences.length, color: 'bg-green-500' },
     { label: 'Certifications', value: profile.certifications.length, color: 'bg-purple-500' },
     { label: 'Research Papers', value: profile.researches.length, color: 'bg-orange-500' },
+    { label: 'Testimonials', value: profile.testimonials?.length ?? 0, color: 'bg-rose-500' },
   ] : []
 
   const completion = profile ? calculateProfileCompletion(profile) : null
@@ -140,7 +142,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.label}

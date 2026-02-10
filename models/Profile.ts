@@ -49,6 +49,17 @@ export interface IResearch {
   publishedAt: string
 }
 
+export interface ITestimonial {
+  id: string
+  name: string
+  role?: string
+  company?: string
+  quote: string
+  avatarUrl?: string
+  avatarPublicId?: string
+  sourceUrl?: string
+}
+
 export interface ISocialLinks {
   github?: string
   linkedin?: string
@@ -101,6 +112,7 @@ export interface IProfile extends Document {
   experiences: IExperience[]
   certifications: ICertification[]
   researches: IResearch[]
+  testimonials: ITestimonial[]
   createdAt: Date
   updatedAt: Date
 }
@@ -144,6 +156,17 @@ const ResearchSchema = new Schema({
   description: { type: String, required: true, trim: true },
   url: { type: String, required: true, trim: true },
   publishedAt: { type: String, required: true },
+})
+
+const TestimonialSchema = new Schema({
+  id: { type: String, required: true },
+  name: { type: String, required: true, trim: true },
+  role: { type: String, trim: true },
+  company: { type: String, trim: true },
+  quote: { type: String, required: true, trim: true },
+  avatarUrl: { type: String, trim: true },
+  avatarPublicId: { type: String, trim: true },
+  sourceUrl: { type: String, trim: true },
 })
 
 const SocialLinksSchema = new Schema({
@@ -310,6 +333,7 @@ const ProfileSchema = new Schema<IProfile>({
   experiences: [ExperienceSchema],
   certifications: [CertificationSchema],
   researches: [ResearchSchema],
+  testimonials: [TestimonialSchema],
 }, {
   timestamps: true,
 })

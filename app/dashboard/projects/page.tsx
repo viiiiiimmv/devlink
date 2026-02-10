@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { Plus, Edit, Trash2, ExternalLink, Github, Eye } from 'lucide-react'
+import { Plus, Edit, Trash2, ExternalLink, Github, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,11 +23,12 @@ interface Project {
 }
 
 export default function ProjectsPage() {
-  const { data: session } = useSession()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | undefined>(undefined)
+  const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null)
+  const [savingOrder, setSavingOrder] = useState(false)
 
   useEffect(() => {
     fetchProjects()
@@ -89,6 +89,42 @@ export default function ProjectsPage() {
     fetchProjects()
   }
 
+  const persistProjectOrder = async (nextProjects: Project[], previousProjects: Project[]) => {
+    setSavingOrder(true)
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projects: nextProjects }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to save project order')
+      }
+      toast.success('Project order updated!')
+    } catch (error) {
+      console.error('Error updating project order:', error)
+      setProjects(previousProjects)
+      toast.error('Failed to update project order')
+    } finally {
+      setSavingOrder(false)
+    }
+  }
+
+  const handleReorder = (targetId: string) => {
+    if (!draggedProjectId || draggedProjectId === targetId) return
+
+    const previousProjects = [...projects]
+    const fromIndex = projects.findIndex((project) => project.id === draggedProjectId)
+    const toIndex = projects.findIndex((project) => project.id === targetId)
+    if (fromIndex < 0 || toIndex < 0) return
+
+    const nextProjects = [...projects]
+    const [moved] = nextProjects.splice(fromIndex, 1)
+    nextProjects.splice(toIndex, 0, moved)
+    setProjects(nextProjects)
+    persistProjectOrder(nextProjects, previousProjects)
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -142,7 +178,13 @@ export default function ProjectsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="h-full hover:shadow-lg transition-shadow">
+                <Card
+                  className={`h-full hover:shadow-lg transition-shadow ${savingOrder && draggedProjectId ? 'opacity-80' : ''}`}
+                  onDragOver={(event) => {
+                    event.preventDefault()
+                  }}
+                  onDrop={() => handleReorder(project.id)}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -151,9 +193,21 @@ export default function ProjectsPage() {
                           {project.description}
                         </CardDescription>
                       </div>
-                      {project.featured && (
-                        <Badge variant="secondary" className="ml-2">Featured</Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {project.featured && (
+                          <Badge variant="secondary" className="ml-2">Featured</Badge>
+                        )}
+                        <button
+                          type="button"
+                          className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+                          draggable
+                          onDragStart={() => setDraggedProjectId(project.id)}
+                          onDragEnd={() => setDraggedProjectId(null)}
+                          aria-label="Drag to reorder project"
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>

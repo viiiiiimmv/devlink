@@ -134,6 +134,7 @@ class Database {
       experiences: profile.experiences?.map((experience: any) => ({ ...experience, _id: undefined })) || [],
       certifications: profile.certifications?.map((certification: any) => ({ ...certification, _id: undefined })) || [],
       researches: profile.researches?.map((research: any) => ({ ...research, _id: undefined })) || [],
+      testimonials: profile.testimonials?.map((testimonial: any) => ({ ...testimonial, _id: undefined })) || [],
       createdAt: profile.createdAt,
       updatedAt: profile.updatedAt
     }

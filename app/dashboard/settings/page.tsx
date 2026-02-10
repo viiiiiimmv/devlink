@@ -160,7 +160,8 @@ export default function SettingsPage() {
           projects: prev?.projects ?? [],
           experiences: prev?.experiences ?? [],
           certifications: prev?.certifications ?? [],
-          researches: prev?.researches ?? []
+          researches: prev?.researches ?? [],
+          testimonials: prev?.testimonials ?? []
         }))
         setUsername(newUsername)
 

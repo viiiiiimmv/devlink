@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { useEffect, useMemo } from 'react'
 import { normalizeSectionSettings, type ProfileSectionId } from '@/lib/profile-customization'
 import ShareProfile from '@/components/ShareProfile'
+import MarkdownContent from '@/components/MarkdownContent'
 
 export interface Profile {
   username: string
@@ -49,6 +50,7 @@ export interface Profile {
   experiences: Experience[]
   certifications: Certification[]
   researches: Research[]
+  testimonials: Testimonial[]
 }
 
 interface Project {
@@ -92,6 +94,17 @@ interface Research {
   publishedAt: string
 }
 
+interface Testimonial {
+  id: string
+  name: string
+  role?: string
+  company?: string
+  quote: string
+  avatarUrl?: string
+  avatarPublicId?: string
+  sourceUrl?: string
+}
+
 interface PublicProfileProps {
   profile: Profile
   showSignature?: boolean
@@ -111,6 +124,7 @@ export default function PublicProfile({
     experiences: profile.experiences || [],
     certifications: profile.certifications || [],
     researches: profile.researches || [],
+    testimonials: profile.testimonials || [],
     socialLinks: profile.socialLinks || {},
     bio: profile.bio || '',
     name: profile.name || 'Developer',
@@ -339,6 +353,8 @@ export default function PublicProfile({
     return featuredProjects.length > 0 ? featuredProjects : safeProfile.projects
   }
 
+  const testimonialsToShow = safeProfile.testimonials.slice(0, 4)
+
   const renderSignatureBadge = () => {
     if (!showSignature) return null
 
@@ -369,6 +385,14 @@ export default function PublicProfile({
     const path = safeProfile.username ? `/${safeProfile.username}` : ''
     return path || '/'
   }, [safeProfile.username])
+
+  const renderMarkdown = (content: string, className?: string) => (
+    <MarkdownContent content={content} className={className} />
+  )
+
+  const renderBio = (fallback: string, className?: string) => (
+    <MarkdownContent content={safeProfile.bio || fallback} className={className} />
+  )
 
   const renderSharePanel = () => (
     <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[120] w-[calc(100%-2rem)] sm:w-80">
@@ -521,9 +545,10 @@ export default function PublicProfile({
                     Template: Bento Grid
                   </div>
                 </div>
-                <p className="mt-6 text-slate-300 leading-relaxed text-lg">
-                  {safeProfile.bio || 'Full Stack Developer passionate about creating reliable digital products.'}
-                </p>
+                {renderBio(
+                  'Full Stack Developer passionate about creating reliable digital products.',
+                  'mt-6 text-slate-300 leading-relaxed text-lg'
+                )}
                 {hasSocialLinks && (
                   <div className="mt-6 flex flex-wrap gap-3">
                     {socialLinkEntries.map(([platform, url]) => {
@@ -614,7 +639,7 @@ export default function PublicProfile({
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 text-slate-300 text-sm leading-relaxed">{project.description}</p>
+                {renderMarkdown(project.description, 'mt-2 text-slate-300 text-sm leading-relaxed')}
                         <div className="mt-3 flex flex-wrap gap-2">
                           {project.technologies.slice(0, 5).map((tech, techIndex) => (
                             <span
@@ -649,7 +674,33 @@ export default function PublicProfile({
                             {formatExperienceDuration(experience.startDate, experience.endDate, experience.isCurrentlyWorking)}
                           </p>
                         </div>
-                        <p className="mt-2 text-sm text-slate-300">{experience.description}</p>
+                        {renderMarkdown(experience.description, 'mt-2 text-sm text-slate-300')}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isSectionVisible('testimonials') && testimonialsToShow.length > 0 && (
+                <div
+                  className="lg:col-span-6 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
+                  style={{ order: getSectionOrder('testimonials') }}
+                >
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400 mb-4">Testimonials</p>
+                  <div className="space-y-4">
+                    {testimonialsToShow.map((testimonial) => (
+                      <div key={testimonial.id} className="rounded-2xl border border-white/10 bg-slate-900/65 p-4">
+                        {renderMarkdown(testimonial.quote, 'text-sm text-slate-200')}
+                        <div className="mt-3 text-xs text-slate-400">
+                          <span className="font-semibold text-slate-200">{testimonial.name}</span>
+                          {(testimonial.role || testimonial.company) && (
+                            <span>
+                              {' '}
+                              · {testimonial.role ? testimonial.role : 'Contributor'}
+                              {testimonial.company ? ` @ ${testimonial.company}` : ''}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -740,9 +791,10 @@ export default function PublicProfile({
                   $ whoami
                 </p>
                 <h1 className="mt-2 text-3xl md:text-5xl font-bold text-white">{safeProfile.name}</h1>
-                <p className="mt-3 text-zinc-300 leading-relaxed">
-                  {safeProfile.bio || 'Developer building robust products and useful internet tools.'}
-                </p>
+                {renderBio(
+                  'Developer building robust products and useful internet tools.',
+                  'mt-3 text-zinc-300 leading-relaxed'
+                )}
                 <p className="mt-2 text-xs text-zinc-500">
                   theme={safeProfile.theme} template=terminal user={safeProfile.username || 'developer'}
                 </p>
@@ -773,7 +825,7 @@ export default function PublicProfile({
                     {projectsToShow.slice(0, 5).map((project) => (
                       <div key={project.id} className="rounded-xl border border-white/10 bg-zinc-950/70 p-4">
                         <p className="text-base font-semibold text-white">{project.title}</p>
-                        <p className="mt-1 text-sm text-zinc-300">{project.description}</p>
+                        {renderMarkdown(project.description, 'mt-1 text-sm text-zinc-300')}
                         <p className="mt-2 text-xs text-zinc-500">
                           tech=[{project.technologies.join(', ')}]
                         </p>
@@ -805,7 +857,30 @@ export default function PublicProfile({
                         <p className="text-xs text-zinc-500">
                           {formatExperienceDuration(experience.startDate, experience.endDate, experience.isCurrentlyWorking)}
                         </p>
-                        <p className="mt-1 text-sm text-zinc-300">{experience.description}</p>
+                        {renderMarkdown(experience.description, 'mt-1 text-sm text-zinc-300')}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {isSectionVisible('testimonials') && testimonialsToShow.length > 0 && (
+                <section style={{ order: getSectionOrder('testimonials') }}>
+                  <p className="text-sm" style={{ color: themeColors.primary }}>$ cat testimonials.txt</p>
+                  <div className="mt-3 rounded-xl border border-white/10 bg-zinc-950/70 p-4 space-y-3">
+                    {testimonialsToShow.map((testimonial) => (
+                      <div key={testimonial.id} className="border-l-2 pl-4" style={{ borderColor: themeColors.primary }}>
+                        {renderMarkdown(testimonial.quote, 'text-sm text-zinc-300')}
+                        <p className="mt-2 text-xs text-zinc-500">
+                          {testimonial.name}
+                          {(testimonial.role || testimonial.company) && (
+                            <span>
+                              {' '}
+                              · {testimonial.role ? testimonial.role : 'Contributor'}
+                              {testimonial.company ? ` @ ${testimonial.company}` : ''}
+                            </span>
+                          )}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -900,9 +975,10 @@ export default function PublicProfile({
               <div className="space-y-3">
                 <p className="text-xs uppercase tracking-[0.28em] text-white/70">Futuristic Profile</p>
                 <h1 className="text-4xl md:text-6xl font-black leading-tight">{safeProfile.name}</h1>
-                <p className="text-white/85 max-w-2xl text-lg">
-                  {safeProfile.bio || 'Shipping polished web products with performance, design quality, and reliability.'}
-                </p>
+                {renderBio(
+                  'Shipping polished web products with performance, design quality, and reliability.',
+                  'text-white/85 max-w-2xl text-lg'
+                )}
               </div>
               <div
                 className="rounded-2xl border px-4 py-3 text-sm font-semibold"
@@ -973,7 +1049,33 @@ export default function PublicProfile({
                           {formatExperienceDuration(experience.startDate, experience.endDate, experience.isCurrentlyWorking)}
                         </p>
                       </div>
-                      <p className="mt-2 text-sm text-white/80">{experience.description}</p>
+                      {renderMarkdown(experience.description, 'mt-2 text-sm text-white/80')}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {isSectionVisible('testimonials') && testimonialsToShow.length > 0 && (
+              <section
+                className="lg:col-span-6 rounded-3xl border border-white/20 bg-white/10 backdrop-blur-2xl p-6"
+                style={{ order: getSectionOrder('testimonials') }}
+              >
+                <h2 className="text-xl font-bold mb-4">Testimonials</h2>
+                <div className="space-y-4">
+                  {testimonialsToShow.map((testimonial) => (
+                    <div key={testimonial.id} className="rounded-xl border border-white/20 bg-black/20 p-4">
+                      {renderMarkdown(testimonial.quote, 'text-sm text-white/80')}
+                      <p className="mt-3 text-xs text-white/70">
+                        {testimonial.name}
+                        {(testimonial.role || testimonial.company) && (
+                          <span>
+                            {' '}
+                            · {testimonial.role ? testimonial.role : 'Contributor'}
+                            {testimonial.company ? ` @ ${testimonial.company}` : ''}
+                          </span>
+                        )}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -1003,7 +1105,7 @@ export default function PublicProfile({
                           </span>
                         )}
                       </div>
-                      <p className="mt-2 text-sm text-white/80">{project.description}</p>
+                      {renderMarkdown(project.description, 'mt-2 text-sm text-white/80')}
                     </article>
                   ))}
                 </div>
@@ -1337,9 +1439,10 @@ export default function PublicProfile({
                             className="w-1 h-full min-h-[60px] mt-1"
                             style={{ backgroundColor: themeColors.secondary }}
                         />
-                        <p className="text-xl md:text-2xl text-gray-300 font-light leading-relaxed max-w-2xl">
-                          {safeProfile.bio || 'Full Stack Developer passionate about creating amazing digital experiences.'}
-                        </p>
+                        {renderBio(
+                          'Full Stack Developer passionate about creating amazing digital experiences.',
+                          'text-xl md:text-2xl text-gray-300 font-light leading-relaxed max-w-2xl'
+                        )}
                       </div>
                     </motion.div>
                   </div>
@@ -1567,9 +1670,7 @@ export default function PublicProfile({
                                   >
                                     {project.title}
                                   </h3>
-                                  <p className="text-lg text-gray-400 leading-relaxed">
-                                    {project.description}
-                                  </p>
+                                  {renderMarkdown(project.description, 'text-lg text-gray-300 leading-relaxed')}
 
                                   {/* Technologies */}
                                   <div className="flex flex-wrap gap-2">
@@ -1744,7 +1845,7 @@ export default function PublicProfile({
                               </div>
                             </div>
 
-                            <p className="text-gray-300 mb-6 leading-relaxed">{experience.description}</p>
+                            {renderMarkdown(experience.description, 'text-gray-300 mb-6 leading-relaxed')}
 
                             {/* Technologies */}
                             <div className="flex flex-wrap gap-2">
@@ -1757,6 +1858,59 @@ export default function PublicProfile({
                           </span>
                               ))}
                             </div>
+                          </div>
+                        </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+          )}
+
+          {isSectionVisible('testimonials') && testimonialsToShow.length > 0 && (
+              <section className="relative py-20 md:py-24 px-6 md:px-12 lg:px-24 border-t-4 border-white/10" style={{ order: getSectionOrder('testimonials') }}>
+                <div className="max-w-7xl mx-auto">
+                  <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.6 }}
+                      className="mb-12"
+                  >
+                    <div className="mono text-sm tracking-widest text-gray-500 mb-4">
+                      TESTIMONIALS
+                    </div>
+                    <h2 className="text-4xl md:text-5xl font-bold mb-2">
+                      What people say
+                    </h2>
+                    <div className="w-24 h-1" style={{ backgroundColor: themeColors.primary }} />
+                  </motion.div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {testimonialsToShow.map((testimonial, index) => (
+                        <motion.div
+                            key={testimonial.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.4, delay: index * 0.1 }}
+                            className="p-8 bg-white/5 border-2 border-white/20 transition-all duration-300"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = themeColors.primary
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                            }}
+                        >
+                          {renderMarkdown(testimonial.quote, 'text-gray-300 leading-relaxed')}
+                          <div className="mt-6 text-sm mono text-gray-400">
+                            <span className="font-semibold text-white">{testimonial.name}</span>
+                            {(testimonial.role || testimonial.company) && (
+                              <span>
+                                {' '}
+                                · {testimonial.role ? testimonial.role : 'Contributor'}
+                                {testimonial.company ? ` @ ${testimonial.company}` : ''}
+                              </span>
+                            )}
                           </div>
                         </motion.div>
                     ))}
@@ -1895,7 +2049,7 @@ export default function PublicProfile({
                                 >
                                   {research.title}
                                 </h3>
-                                <p className="text-gray-400 leading-relaxed mb-4">{research.description}</p>
+                                {renderMarkdown(research.description, 'text-gray-400 leading-relaxed mb-4')}
                                 <span className="mono text-sm text-gray-500">
                             {new Date(research.publishedAt).toLocaleDateString('en-US', {
                               year: 'numeric',
