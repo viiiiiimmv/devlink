@@ -6,10 +6,13 @@ export default withAuth(
     const token = req.nextauth.token
     const isAuth = !!token
     const isAuthPage = req.nextUrl.pathname.startsWith('/auth')
+    const isPinPage = req.nextUrl.pathname.startsWith('/auth/pin')
     const isDashboard = req.nextUrl.pathname.startsWith('/dashboard')
     const isSetup = req.nextUrl.pathname === '/dashboard/setup'
     const isHomePage = req.nextUrl.pathname === '/' || req.nextUrl.pathname === ''
     const needsOnboarding = token?.onboardingCompleted === false
+    const pinEnabled = token?.pinEnabled === true
+    const pinVerified = token?.pinVerified === true
     
     // Debug logging (development only)
     if (process.env.NODE_ENV === 'development') {
@@ -21,6 +24,16 @@ export default withAuth(
 
     // Handle authenticated users
     if (isAuth) {
+      if (pinEnabled && !pinVerified && !isPinPage) {
+        let from = req.nextUrl.pathname
+        if (req.nextUrl.search) {
+          from += req.nextUrl.search
+        }
+        return NextResponse.redirect(
+          new URL(`/auth/pin?from=${encodeURIComponent(from)}`, req.url)
+        )
+      }
+
       // Route users who still need onboarding to setup flow
       if (needsOnboarding && !isSetup) {
         if (process.env.NODE_ENV === 'development') {
@@ -45,7 +58,7 @@ export default withAuth(
       }
       
       // If user is authenticated and tries to access auth pages, redirect to dashboard
-      if (isAuthPage) {
+      if (isAuthPage && !isPinPage) {
         if (token?.username) {
           if (process.env.NODE_ENV === 'development') {
             console.log('Middleware - Redirecting authenticated user to dashboard')
@@ -83,6 +96,16 @@ export default withAuth(
 
     // Handle unauthenticated users
     if (!isAuth) {
+      if (isPinPage) {
+        let from = req.nextUrl.pathname
+        if (req.nextUrl.search) {
+          from += req.nextUrl.search
+        }
+        return NextResponse.redirect(
+          new URL(`/auth/signin?from=${encodeURIComponent(from)}`, req.url)
+        )
+      }
+
       // Redirect unauthenticated users trying to access protected routes
       if (isDashboard) {
         let from = req.nextUrl.pathname

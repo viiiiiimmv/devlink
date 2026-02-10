@@ -123,6 +123,8 @@ export const authOptions: NextAuthOptions = {
               token.username = dbUser.username || null
               token.provider = dbUser.provider
               token.onboardingCompleted = dbUser.onboardingCompleted !== false
+              token.pinEnabled = dbUser.pinEnabled === true
+              token.pinVerified = dbUser.pinEnabled === true ? false : true
             } else {
               token.email = normalizedEmail
               if (typeof user.id === 'string') {
@@ -134,6 +136,8 @@ export const authOptions: NextAuthOptions = {
               if (typeof user.image === 'string') {
                 token.picture = user.image
               }
+              token.pinEnabled = false
+              token.pinVerified = true
             }
           } else if (typeof user.id === 'string') {
             token.id = user.id
@@ -168,13 +172,21 @@ export const authOptions: NextAuthOptions = {
           if (typeof updatePayload.onboardingCompleted === 'boolean') {
             token.onboardingCompleted = updatePayload.onboardingCompleted
           }
+
+          if (typeof updatePayload.pinEnabled === 'boolean') {
+            token.pinEnabled = updatePayload.pinEnabled
+          }
+
+          if (typeof updatePayload.pinVerified === 'boolean') {
+            token.pinVerified = updatePayload.pinVerified
+          }
         }
 
         const tokenEmail = normalizeEmail(token.email)
 
         // If the session is being updated, refresh username from database
         // Also refresh if token is missing username/provider but has an email.
-        if (tokenEmail && (trigger === 'update' || !token.username || !token.provider)) {
+        if (tokenEmail && (trigger === 'update' || !token.username || !token.provider || typeof token.pinEnabled !== 'boolean')) {
           const dbUser = await db.findUser(tokenEmail)
           if (dbUser) {
             token.id = dbUser._id
@@ -184,6 +196,10 @@ export const authOptions: NextAuthOptions = {
             token.username = dbUser.username || null
             token.provider = dbUser.provider
             token.onboardingCompleted = dbUser.onboardingCompleted !== false
+            token.pinEnabled = dbUser.pinEnabled === true
+            if (typeof token.pinVerified !== 'boolean') {
+              token.pinVerified = dbUser.pinEnabled === true ? false : true
+            }
           }
         }
       } catch (error) {
@@ -205,6 +221,12 @@ export const authOptions: NextAuthOptions = {
             provider: toOAuthProvider(token.provider),
             onboardingCompleted: typeof token.onboardingCompleted === 'boolean'
               ? token.onboardingCompleted
+              : undefined,
+            pinEnabled: typeof token.pinEnabled === 'boolean'
+              ? token.pinEnabled
+              : undefined,
+            pinVerified: typeof token.pinVerified === 'boolean'
+              ? token.pinVerified
               : undefined,
             email: tokenEmail || session.user?.email || '',
             name:

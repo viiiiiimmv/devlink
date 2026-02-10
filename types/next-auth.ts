@@ -7,6 +7,8 @@ declare module 'next-auth' {
       id?: string
       provider?: 'google' | 'github'
       onboardingCompleted?: boolean
+      pinEnabled?: boolean
+      pinVerified?: boolean
     } & DefaultSession['user']
   }
 
@@ -14,6 +16,8 @@ declare module 'next-auth' {
     username?: string | null
     provider?: 'google' | 'github'
     onboardingCompleted?: boolean
+    pinEnabled?: boolean
+    pinVerified?: boolean
   }
 }
 
@@ -23,6 +27,8 @@ declare module 'next-auth/jwt' {
     id?: string
     provider?: 'google' | 'github'
     onboardingCompleted?: boolean
+    pinEnabled?: boolean
+    pinVerified?: boolean
   }
 }
 

@@ -18,9 +18,12 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-9 w-9 px-0">
-          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+        <Button variant="ghost" size="sm" className="relative h-9 w-9 px-0">
+          <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-amber-200/40 via-amber-100/20 to-sky-200/40 opacity-100 transition-opacity duration-300 dark:from-slate-800/60 dark:via-indigo-900/30 dark:to-slate-900/70" />
+          <span className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-full">
+            <Sun className="absolute h-5 w-5 text-amber-600 transition-all duration-300 ease-out dark:translate-y-6 dark:opacity-0" />
+            <Moon className="absolute h-5 w-5 translate-y-6 text-slate-700 opacity-0 transition-all duration-300 ease-out dark:translate-y-0 dark:opacity-100 dark:text-slate-100" />
+          </span>
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
@@ -51,11 +54,14 @@ export function SimpleThemeToggle() {
     <Button 
       variant="ghost" 
       size="sm" 
-      className="h-9 w-9 px-0"
+      className="relative h-9 w-9 px-0"
       onClick={toggleTheme}
     >
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-amber-200/40 via-amber-100/20 to-sky-200/40 opacity-100 transition-opacity duration-300 dark:from-slate-800/60 dark:via-indigo-900/30 dark:to-slate-900/70" />
+      <span className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-full">
+        <Sun className="absolute h-5 w-5 text-amber-600 transition-all duration-300 ease-out dark:translate-y-6 dark:opacity-0" />
+        <Moon className="absolute h-5 w-5 translate-y-6 text-slate-700 opacity-0 transition-all duration-300 ease-out dark:translate-y-0 dark:opacity-100 dark:text-slate-100" />
+      </span>
       <span className="sr-only">Toggle theme</span>
     </Button>
   )

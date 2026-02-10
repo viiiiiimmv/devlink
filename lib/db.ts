@@ -12,6 +12,7 @@ export type IUserData = {
   providers: OAuthProvider[]
   username: string
   onboardingCompleted?: boolean
+  pinEnabled?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -105,6 +106,7 @@ class Database {
   private serializeUser(user: any): IUserData {
     const primaryProvider = this.getPrimaryProvider(user) ?? 'google'
     const onboardingCompleted = user?.onboardingCompleted === false ? false : true
+    const pinEnabled = typeof user?.securityPinHash === 'string' && user.securityPinHash.trim().length > 0
     return {
       _id: user._id?.toString(),
       email: user.email,
@@ -114,6 +116,7 @@ class Database {
       providers: primaryProvider ? [primaryProvider] : [],
       username: user.username,
       onboardingCompleted,
+      pinEnabled,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     }

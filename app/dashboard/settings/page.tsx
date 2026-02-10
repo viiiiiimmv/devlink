@@ -5,7 +5,7 @@ import type { Profile } from '@/components/public-profile/profile'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Save, Trash2, AlertTriangle, X, Check, Download, FileText } from 'lucide-react'
+import { Save, Trash2, AlertTriangle, X, Check, Download, FileText, Lock, KeyRound, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ import { isValidUsername, normalizeUsernameInput, USERNAME_VALIDATION_MESSAGE } 
 import { useSiteUrl } from '@/hooks/use-site-url'
 
 export default function SettingsPage() {
-  const { update: updateSession } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const router = useRouter()
   const [username, setUsername] = useState('')
   const [profileData, setProfileData] = useState<Profile | null>(null)
@@ -28,6 +28,13 @@ export default function SettingsPage() {
   const [checkingUsername, setCheckingUsername] = useState(false)
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
   const siteUrl = useSiteUrl()
+  const [currentPin, setCurrentPin] = useState('')
+  const [newPin, setNewPin] = useState('')
+  const [confirmPin, setConfirmPin] = useState('')
+  const [updatingPin, setUpdatingPin] = useState(false)
+  const [regeneratingCodes, setRegeneratingCodes] = useState(false)
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([])
+  const [showRecoveryCodes, setShowRecoveryCodes] = useState(false)
 
   useEffect(() => {
     fetchSettings()
@@ -83,6 +90,17 @@ export default function SettingsPage() {
   const handleUsernameChange = (value: string) => {
     setUsername(normalizeUsernameInput(value))
     setUsernameAvailable(null)
+  }
+
+  const pinEnabled = session?.user?.pinEnabled === true
+
+  const sanitizePinInput = (value: string, length: number = 6) =>
+    value.replace(/\D/g, '').slice(0, length)
+
+  const resetPinFields = () => {
+    setCurrentPin('')
+    setNewPin('')
+    setConfirmPin('')
   }
 
   const fetchSettings = async () => {
@@ -211,6 +229,114 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSetPin = async () => {
+    if (newPin.length !== 6 || confirmPin.length !== 6) {
+      toast.error('PIN must be exactly 6 digits')
+      return
+    }
+    if (newPin !== confirmPin) {
+      toast.error('PIN confirmation does not match')
+      return
+    }
+
+    setUpdatingPin(true)
+    try {
+      const response = await fetch('/api/security/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: newPin })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to set PIN')
+      }
+
+      toast.success('Security PIN enabled!')
+      setRecoveryCodes(data.recoveryCodes || [])
+      setShowRecoveryCodes(true)
+      resetPinFields()
+      await updateSession({ pinEnabled: true, pinVerified: true })
+    } catch (error) {
+      console.error('Error setting PIN:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to set PIN')
+    } finally {
+      setUpdatingPin(false)
+    }
+  }
+
+  const handleChangePin = async () => {
+    if (currentPin.length !== 6 || newPin.length !== 6 || confirmPin.length !== 6) {
+      toast.error('PIN must be exactly 6 digits')
+      return
+    }
+    if (newPin !== confirmPin) {
+      toast.error('PIN confirmation does not match')
+      return
+    }
+
+    setUpdatingPin(true)
+    try {
+      const response = await fetch('/api/security/pin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPin, newPin })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to update PIN')
+      }
+
+      toast.success('Security PIN updated!')
+      setRecoveryCodes(data.recoveryCodes || [])
+      setShowRecoveryCodes(true)
+      resetPinFields()
+      await updateSession({ pinEnabled: true, pinVerified: true })
+    } catch (error) {
+      console.error('Error updating PIN:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to update PIN')
+    } finally {
+      setUpdatingPin(false)
+    }
+  }
+
+  const handleRegenerateCodes = async () => {
+    if (currentPin.length !== 6) {
+      toast.error('Enter your current PIN to regenerate recovery codes')
+      return
+    }
+
+    setRegeneratingCodes(true)
+    try {
+      const response = await fetch('/api/security/pin', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPin })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to regenerate recovery codes')
+      }
+
+      toast.success('Recovery codes regenerated')
+      setRecoveryCodes(data.recoveryCodes || [])
+      setShowRecoveryCodes(true)
+    } catch (error) {
+      console.error('Error regenerating recovery codes:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to regenerate recovery codes')
+    } finally {
+      setRegeneratingCodes(false)
+    }
+  }
+
+  const handleCopyRecoveryCodes = async () => {
+    try {
+      await navigator.clipboard.writeText(recoveryCodes.join('\n'))
+      toast.success('Recovery codes copied')
+    } catch (error) {
+      toast.error('Unable to copy recovery codes')
+    }
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -328,6 +454,129 @@ export default function SettingsPage() {
                   Download PDF
                 </a>
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Security PIN
+              </CardTitle>
+              <CardDescription>
+                Require a 6-digit PIN after signing in for an extra layer of security.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-5">
+                <div className="rounded-lg border border-border bg-muted/40 p-4">
+                  <p className="text-sm font-medium text-foreground">
+                    {pinEnabled ? 'PIN protection is enabled.' : 'PIN protection is not enabled yet.'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    If you forget your PIN and don’t have recovery codes, the only option is to delete your account.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {pinEnabled && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground" htmlFor="current-pin">
+                        Current PIN
+                      </label>
+                      <Input
+                        id="current-pin"
+                        type="password"
+                        inputMode="numeric"
+                        value={currentPin}
+                        onChange={(e) => setCurrentPin(sanitizePinInput(e.target.value))}
+                        placeholder="Enter current 6-digit PIN"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground" htmlFor="new-pin">
+                      {pinEnabled ? 'New PIN' : 'Set PIN'}
+                    </label>
+                    <Input
+                      id="new-pin"
+                      type="password"
+                      inputMode="numeric"
+                      value={newPin}
+                      onChange={(e) => setNewPin(sanitizePinInput(e.target.value))}
+                      placeholder="Enter 6-digit PIN"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground" htmlFor="confirm-pin">
+                      Confirm PIN
+                    </label>
+                    <Input
+                      id="confirm-pin"
+                      type="password"
+                      inputMode="numeric"
+                      value={confirmPin}
+                      onChange={(e) => setConfirmPin(sanitizePinInput(e.target.value))}
+                      placeholder="Re-enter PIN"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={pinEnabled ? handleChangePin : handleSetPin}
+                    disabled={updatingPin}
+                    className="flex items-center gap-2"
+                  >
+                    {updatingPin ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    ) : (
+                      <KeyRound className="h-4 w-4" />
+                    )}
+                    {pinEnabled ? 'Update PIN' : 'Enable PIN'}
+                  </Button>
+
+                  {pinEnabled && (
+                    <Button
+                      variant="outline"
+                      onClick={handleRegenerateCodes}
+                      disabled={regeneratingCodes}
+                      className="flex items-center gap-2"
+                    >
+                      {regeneratingCodes ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-foreground" />
+                      ) : (
+                        <KeyRound className="h-4 w-4" />
+                      )}
+                      Regenerate Recovery Codes
+                    </Button>
+                  )}
+                </div>
+
+                {showRecoveryCodes && recoveryCodes.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 p-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                        Save these recovery codes now
+                      </p>
+                      <p className="text-xs text-amber-800 dark:text-amber-300">
+                        Each code can be used to reset your PIN if you forget it.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono text-amber-900 dark:text-amber-100">
+                      {recoveryCodes.map((code) => (
+                        <span key={code} className="rounded bg-white/70 dark:bg-white/10 px-2 py-1 text-center">
+                          {code}
+                        </span>
+                      ))}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleCopyRecoveryCodes} className="flex items-center gap-2">
+                      <Copy className="h-4 w-4" />
+                      Copy Codes
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
