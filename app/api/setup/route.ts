@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => null)
     const username = normalizeUsernameInput(body?.username)
+    const requestedName = typeof body?.name === 'string' ? body.name.trim() : ''
 
     if (!username) {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 })
@@ -55,6 +56,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (requestedName && requestedName !== currentUser.name) {
+      const updatedUser = await db.updateUser(sessionEmail, { name: requestedName })
+      if (updatedUser) {
+        currentUser = updatedUser
+      }
+    }
+
+    const profileName = requestedName || currentUser.name || session?.user?.name || ''
+
+    if (!profileName) {
+      return NextResponse.json({ error: 'Full name is required' }, { status: 400 })
+    }
+
     const alreadyOwnsUsername = currentUser.username === username
 
     if (!alreadyOwnsUsername) {
@@ -85,7 +99,7 @@ export async function POST(request: NextRequest) {
       const profile = {
         userId: currentUser._id,
         username,
-        name: currentUser.name,
+        name: profileName,
         bio: '',
         skills: [],
         socialLinks: {},

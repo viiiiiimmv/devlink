@@ -11,6 +11,7 @@ export type IUserData = {
   provider: OAuthProvider
   providers: OAuthProvider[]
   username: string
+  onboardingCompleted?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -103,6 +104,7 @@ class Database {
 
   private serializeUser(user: any): IUserData {
     const primaryProvider = this.getPrimaryProvider(user) ?? 'google'
+    const onboardingCompleted = user?.onboardingCompleted === false ? false : true
     return {
       _id: user._id?.toString(),
       email: user.email,
@@ -111,6 +113,7 @@ class Database {
       provider: primaryProvider,
       providers: primaryProvider ? [primaryProvider] : [],
       username: user.username,
+      onboardingCompleted,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     }
@@ -167,6 +170,7 @@ class Database {
         email: normalizedEmail,
         provider,
         providers,
+        onboardingCompleted: false,
       })
       const savedUser = await user.save()
       return this.serializeUser(savedUser.toObject())
@@ -231,6 +235,7 @@ class Database {
         provider: userData.provider,
         providers: [userData.provider],
         name: trimmedName || normalizedEmail.split('@')[0],
+        onboardingCompleted: false,
       }
 
       if (trimmedImage) {

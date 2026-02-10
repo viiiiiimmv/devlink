@@ -122,6 +122,7 @@ export const authOptions: NextAuthOptions = {
               token.picture = dbUser.image
               token.username = dbUser.username || null
               token.provider = dbUser.provider
+              token.onboardingCompleted = dbUser.onboardingCompleted !== false
             } else {
               token.email = normalizedEmail
               if (typeof user.id === 'string') {
@@ -156,6 +157,17 @@ export const authOptions: NextAuthOptions = {
           if (updatedProvider) {
             token.provider = updatedProvider
           }
+
+          const updatedName = typeof updatePayload.name === 'string'
+            ? updatePayload.name.trim()
+            : ''
+          if (updatedName) {
+            token.name = updatedName
+          }
+
+          if (typeof updatePayload.onboardingCompleted === 'boolean') {
+            token.onboardingCompleted = updatePayload.onboardingCompleted
+          }
         }
 
         const tokenEmail = normalizeEmail(token.email)
@@ -171,6 +183,7 @@ export const authOptions: NextAuthOptions = {
             token.picture = dbUser.image
             token.username = dbUser.username || null
             token.provider = dbUser.provider
+            token.onboardingCompleted = dbUser.onboardingCompleted !== false
           }
         }
       } catch (error) {
@@ -190,6 +203,9 @@ export const authOptions: NextAuthOptions = {
             id: typeof token.id === 'string' ? token.id : undefined,
             username: typeof token.username === 'string' ? token.username : null,
             provider: toOAuthProvider(token.provider),
+            onboardingCompleted: typeof token.onboardingCompleted === 'boolean'
+              ? token.onboardingCompleted
+              : undefined,
             email: tokenEmail || session.user?.email || '',
             name:
               typeof token.name === 'string'

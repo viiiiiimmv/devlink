@@ -9,6 +9,7 @@ export default withAuth(
     const isDashboard = req.nextUrl.pathname.startsWith('/dashboard')
     const isSetup = req.nextUrl.pathname === '/dashboard/setup'
     const isHomePage = req.nextUrl.pathname === '/' || req.nextUrl.pathname === ''
+    const needsOnboarding = token?.onboardingCompleted === false
     
     // Debug logging (development only)
     if (process.env.NODE_ENV === 'development') {
@@ -20,6 +21,14 @@ export default withAuth(
 
     // Handle authenticated users
     if (isAuth) {
+      // Route users who still need onboarding to setup flow
+      if (needsOnboarding && !isSetup) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Middleware - Redirecting user to onboarding setup')
+        }
+        return NextResponse.redirect(new URL('/dashboard/setup', req.url))
+      }
+
       // If user is authenticated and tries to access home page, redirect to dashboard
       if (isHomePage) {
         if (token?.username) {
@@ -62,8 +71,8 @@ export default withAuth(
           return NextResponse.redirect(new URL('/dashboard/setup', req.url))
         }
 
-        // If user has username but is on setup page, redirect to dashboard
-        if (hasUsername && isSetup) {
+        // If user has username, onboarding is complete, and is on setup page, redirect to dashboard
+        if (hasUsername && isSetup && !needsOnboarding) {
           if (process.env.NODE_ENV === 'development') {
             console.log('Middleware - Redirecting user with username away from setup')
           }

@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/layout'
 import { calculateProfileCompletion } from '@/lib/profile-completion'
+import { useSiteUrl } from '@/hooks/use-site-url'
 
 interface Profile {
   username: string
@@ -47,6 +48,7 @@ export default function Dashboard() {
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const siteUrl = useSiteUrl()
 
   // Type guard for session user
   const hasUsername = (session: any): session is { user: { username: string } } => {
@@ -62,6 +64,10 @@ export default function Dashboard() {
     }
 
     if (status === 'authenticated') {
+      if (session?.user?.onboardingCompleted === false) {
+        router.push('/dashboard/setup')
+        return
+      }
       if (hasUsername(session)) {
         fetchProfile()
       } else {
@@ -292,7 +298,7 @@ export default function Dashboard() {
                 target="_blank"
                 className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
-                devlink.vercel.app/{profile?.username}
+                {siteUrl}/{profile?.username}
               </Link>
             </CardDescription>
           </CardHeader>

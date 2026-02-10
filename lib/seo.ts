@@ -19,6 +19,13 @@ export function getSiteUrl(): string {
   return ensureAbsoluteSiteUrl(envSiteUrl)
 }
 
+export function getClientSiteUrl(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin
+  }
+  return getSiteUrl()
+}
+
 export function absoluteUrl(pathname: string = '/'): string {
   const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`
   return new URL(normalizedPath, getSiteUrl()).toString()

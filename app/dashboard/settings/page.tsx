@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import DashboardLayout from '@/components/dashboard/layout'
 import toast from 'react-hot-toast'
 import { isValidUsername, normalizeUsernameInput, USERNAME_VALIDATION_MESSAGE } from '@/lib/username'
+import { useSiteUrl } from '@/hooks/use-site-url'
 
 export default function SettingsPage() {
   const { update: updateSession } = useSession()
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   const [newUsername, setNewUsername] = useState('')
   const [checkingUsername, setCheckingUsername] = useState(false)
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const siteUrl = useSiteUrl()
 
   useEffect(() => {
     fetchSettings()
@@ -242,7 +244,7 @@ export default function SettingsPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <span className="text-muted-foreground">devlink.vercel.app/</span>
+                  <span className="text-muted-foreground">{siteUrl}/</span>
                   <div className="flex-1 relative">
                     <Input
                       value={username}
@@ -284,7 +286,7 @@ export default function SettingsPage() {
                         New portfolio URL will be:
                       </p>
                       <p className="font-mono text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 px-2 py-1 rounded">
-                        devlink.vercel.app/{username}
+                        {siteUrl}/{username}
                       </p>
                       {usernameAvailable === true && (
                         <p className="text-green-600">✓ Username is available!</p>

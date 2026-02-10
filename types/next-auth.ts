@@ -6,12 +6,14 @@ declare module 'next-auth' {
       username?: string | null
       id?: string
       provider?: 'google' | 'github'
+      onboardingCompleted?: boolean
     } & DefaultSession['user']
   }
 
   interface User {
     username?: string | null
     provider?: 'google' | 'github'
+    onboardingCompleted?: boolean
   }
 }
 
@@ -20,6 +22,7 @@ declare module 'next-auth/jwt' {
     username?: string | null
     id?: string
     provider?: 'google' | 'github'
+    onboardingCompleted?: boolean
   }
 }
 

@@ -10,6 +10,7 @@ export interface IUser extends Document {
   provider: OAuthProvider
   providers: OAuthProvider[]
   username: string
+  onboardingCompleted?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -56,6 +57,10 @@ const UserSchema = new Schema<IUser>({
       },
       message: 'Username must start with a letter and only use lowercase letters and numbers'
     }
+  },
+  onboardingCompleted: {
+    type: Boolean,
+    default: false,
   },
 }, {
   timestamps: true,
