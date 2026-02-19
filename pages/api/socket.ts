@@ -1,4 +1,6 @@
-import type { NextApiRequest } from 'next'
+import type { Server as HTTPServer } from 'http'
+import type { Socket as NetSocket } from 'net'
+import type { NextApiRequest, NextApiResponse } from 'next'
 import type { Socket } from 'socket.io'
 import { Server as SocketIOServer } from 'socket.io'
 import connectDB from '@/lib/mongodb'
@@ -6,6 +8,14 @@ import Conversation from '@/models/Conversation'
 import Message from '@/models/Message'
 import { setSocketServer } from '@/lib/socket-server'
 import { verifySocketAuthToken, type SocketAuthPayload } from '@/lib/socket-auth'
+
+type NextApiResponseServerIO = NextApiResponse & {
+  socket: NetSocket & {
+    server: HTTPServer & {
+      io?: SocketIOServer
+    }
+  }
+}
 
 type AuthenticatedSocket = Socket & {
   data: {
