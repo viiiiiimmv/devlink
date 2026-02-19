@@ -51,7 +51,6 @@ coverage/
 scripts/test-auth.js
 
 # Ignore package manager files
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
