@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { sendOnboardingCompletedEmail } from '@/lib/transactional-email'
 
 const normalizeEmail = (value: unknown): string =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -19,6 +20,14 @@ export async function POST() {
     if (!updatedUser) {
       return NextResponse.json({ error: 'Failed to update onboarding status' }, { status: 500 })
     }
+
+    void sendOnboardingCompletedEmail({
+      toEmail: updatedUser.email,
+      name: updatedUser.name,
+      username: updatedUser.username,
+    }).catch((error) => {
+      console.error('Onboarding completion email dispatch failed:', error)
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

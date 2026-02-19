@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
-import DashboardLayout from '@/components/dashboard/layout'
 import toast from 'react-hot-toast'
 import {
   DEFAULT_SECTION_SETTINGS,
@@ -384,16 +383,16 @@ export default function CustomisePage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
-      </DashboardLayout>
+      
     )
   }
 
   return (
-    <DashboardLayout>
+    
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -836,6 +835,6 @@ export default function CustomisePage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    
   )
 }

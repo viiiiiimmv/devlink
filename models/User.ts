@@ -11,6 +11,8 @@ export interface IUser extends Document {
   providers: OAuthProvider[]
   username: string
   onboardingCompleted?: boolean
+  welcomeEmailSentAt?: Date
+  welcomeEmailLockAt?: Date
   securityPinHash?: string
   pinRecoveryCodes?: string[]
   pinRecoveryGeneratedAt?: Date
@@ -64,6 +66,12 @@ const UserSchema = new Schema<IUser>({
   onboardingCompleted: {
     type: Boolean,
     default: false,
+  },
+  welcomeEmailSentAt: {
+    type: Date,
+  },
+  welcomeEmailLockAt: {
+    type: Date,
   },
   securityPinHash: {
     type: String,

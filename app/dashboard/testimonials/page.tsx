@@ -5,7 +5,6 @@ import { motion } from 'framer-motion'
 import { Plus, Edit, Trash2, MessageSquare, GripVertical, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import DashboardLayout from '@/components/dashboard/layout'
 import TestimonialFormModal from '@/components/modals/testimonial-form-modal'
 import toast from 'react-hot-toast'
 import MarkdownContent from '@/components/MarkdownContent'
@@ -126,16 +125,16 @@ export default function TestimonialsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
-      </DashboardLayout>
+      
     )
   }
 
   return (
-    <DashboardLayout>
+    
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -244,6 +243,6 @@ export default function TestimonialsPage() {
           testimonial={editingTestimonial}
         />
       </div>
-    </DashboardLayout>
+    
   )
 }

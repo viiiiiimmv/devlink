@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { 
   LayoutDashboard, 
   User, 
@@ -20,11 +19,17 @@ import {
   X,
   Code,
   Eye,
-  ExternalLink
+  ExternalLink,
+  UsersRound,
+  MessagesSquare,
+  Bell
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { SimpleThemeToggle } from '@/components/ui/theme-toggle'
+import { connectChatSocket, disconnectChatSocket } from '@/lib/socket-client'
+import { CHAT_UNREAD_REFRESH_EVENT } from '@/lib/chat-events'
+import { toast } from 'sonner'
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +50,8 @@ const navigation = [
   { name: 'Testimonials', href: '/dashboard/testimonials', icon: MessageSquare },
   { name: 'Certifications', href: '/dashboard/certifications', icon: Award },
   { name: 'Research Papers', href: '/dashboard/researches', icon: BookOpen },
+  { name: 'Talent Network', href: '/dashboard/network', icon: UsersRound },
+  { name: 'Pulse Chat', href: '/dashboard/chats', icon: MessagesSquare },
   { name: 'Import', href: '/dashboard/import', icon: Download },
   { name: 'Customise', href: '/dashboard/customise', icon: Palette },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
@@ -53,15 +60,59 @@ const navigation = [
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const activePathname = pathname ?? ''
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false)
   const [isDesktopHovering, setIsDesktopHovering] = useState(false)
+  const [unreadPulseCount, setUnreadPulseCount] = useState(0)
+  const [notificationSocketConnected, setNotificationSocketConnected] = useState(false)
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
+  const [notificationsSupported, setNotificationsSupported] = useState(false)
   const username = (session?.user as { username?: string | null } | undefined)?.username
+  const currentUserId = typeof session?.user?.id === 'string' ? session.user.id : ''
+  const isOnPulseChat = activePathname.startsWith('/dashboard/chats')
+  const isOnPulseChatRef = useRef(isOnPulseChat)
   const userImage =
     typeof session?.user?.image === 'string' && session.user.image.trim().length > 0
       ? session.user.image
       : undefined
   const isDesktopExpanded = !isDesktopCollapsed || isDesktopHovering
+
+  useEffect(() => {
+    isOnPulseChatRef.current = isOnPulseChat
+  }, [isOnPulseChat])
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!currentUserId) return
+
+    try {
+      const response = await fetch('/api/chat/conversations', { cache: 'no-store' })
+      if (!response.ok) return
+      const data = await response.json()
+      const conversations = Array.isArray(data?.conversations) ? data.conversations : []
+      const totalUnread = conversations.reduce((sum: number, conversation: any) => {
+        const unread = Number(conversation?.unreadCount ?? 0)
+        if (!Number.isFinite(unread) || unread <= 0) return sum
+        return sum + unread
+      }, 0)
+      setUnreadPulseCount(totalUnread)
+    } catch (error) {
+      console.error('Unread count fetch failed:', error)
+    }
+  }, [currentUserId])
+
+  const maybeShowBrowserNotification = useCallback((title: string, body: string, conversationId: string) => {
+    if (typeof window === 'undefined') return
+    if (!('Notification' in window)) return
+    if (Notification.permission !== 'granted') return
+
+    const notification = new Notification(title, { body })
+    notification.onclick = () => {
+      window.focus()
+      window.location.href = `/dashboard/chats?conversation=${encodeURIComponent(conversationId)}`
+      notification.close()
+    }
+  }, [])
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -71,6 +122,174 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setIsDesktopCollapsed((current) => !current)
     setIsDesktopHovering(false)
   }
+
+  const handleEnableBrowserAlerts = useCallback(async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      toast.error('Browser notifications are not supported here')
+      return
+    }
+
+    try {
+      const permission = await Notification.requestPermission()
+      setNotificationPermission(permission)
+
+      if (permission === 'granted') {
+        toast.success('Browser notifications enabled')
+        return
+      }
+
+      if (permission === 'denied') {
+        toast.error('Notifications are blocked. Enable them from browser site settings.')
+        return
+      }
+
+      toast('Notification permission dismissed')
+    } catch (error) {
+      console.error('Notification permission request failed:', error)
+      toast.error('Unable to enable notifications')
+    }
+  }, [])
+
+  const formatUnreadCount = (count: number) => {
+    if (count > 99) return '99+'
+    return `${count}`
+  }
+
+  useEffect(() => {
+    if (!currentUserId) return
+
+    const handleVisibilitySync = () => {
+      if (document.visibilityState !== 'visible') return
+      fetchUnreadCount()
+    }
+
+    fetchUnreadCount()
+    window.addEventListener('focus', handleVisibilitySync)
+    document.addEventListener('visibilitychange', handleVisibilitySync)
+
+    return () => {
+      window.removeEventListener('focus', handleVisibilitySync)
+      document.removeEventListener('visibilitychange', handleVisibilitySync)
+    }
+  }, [currentUserId, fetchUnreadCount])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!currentUserId) return
+
+    const supported = 'Notification' in window
+    setNotificationsSupported(supported)
+
+    if (!supported) return
+    setNotificationPermission(Notification.permission)
+  }, [currentUserId])
+
+  useEffect(() => {
+    if (!currentUserId) return
+
+    let mounted = true
+    let detachSocketHandlers: (() => void) | null = null
+
+    const onRefreshUnread = () => {
+      fetchUnreadCount()
+    }
+
+    const setupSocket = async () => {
+      try {
+        const socket = await connectChatSocket()
+        if (!mounted) return
+
+        const handleConversationUpdate = (payload: {
+          conversationId: string
+          lastMessageText: string
+          lastMessageAt: string
+          lastMessageSenderId: string
+          senderName: string
+        }) => {
+          fetchUnreadCount()
+
+          const isIncoming = payload.lastMessageSenderId !== currentUserId
+          if (!isIncoming || isOnPulseChatRef.current) {
+            return
+          }
+
+          const preview = payload.lastMessageText.length > 90
+            ? `${payload.lastMessageText.slice(0, 90)}...`
+            : payload.lastMessageText
+
+          toast(`${payload.senderName} sent a message`, {
+            description: preview,
+            action: {
+              label: 'Open',
+              onClick: () => {
+                window.location.href = `/dashboard/chats?conversation=${encodeURIComponent(payload.conversationId)}`
+              },
+            },
+          })
+
+          maybeShowBrowserNotification(
+            `New message from ${payload.senderName}`,
+            preview || 'Open Pulse Chat to respond.',
+            payload.conversationId
+          )
+        }
+
+        const handleRead = () => {
+          fetchUnreadCount()
+        }
+
+        const handleConnect = () => {
+          setNotificationSocketConnected(true)
+          fetchUnreadCount()
+        }
+
+        const handleDisconnect = () => {
+          setNotificationSocketConnected(false)
+        }
+
+        socket.on('chat:conversation:update', handleConversationUpdate)
+        socket.on('chat:read', handleRead)
+        socket.on('connect', handleConnect)
+        socket.on('disconnect', handleDisconnect)
+        setNotificationSocketConnected(socket.connected)
+
+        detachSocketHandlers = () => {
+          socket.off('chat:conversation:update', handleConversationUpdate)
+          socket.off('chat:read', handleRead)
+          socket.off('connect', handleConnect)
+          socket.off('disconnect', handleDisconnect)
+        }
+      } catch (error) {
+        console.error('Notification socket init failed:', error)
+        setNotificationSocketConnected(false)
+      }
+    }
+
+    window.addEventListener(CHAT_UNREAD_REFRESH_EVENT, onRefreshUnread)
+    setupSocket()
+
+    return () => {
+      mounted = false
+      window.removeEventListener(CHAT_UNREAD_REFRESH_EVENT, onRefreshUnread)
+      if (detachSocketHandlers) {
+        detachSocketHandlers()
+      }
+      setNotificationSocketConnected(false)
+      disconnectChatSocket()
+    }
+  }, [currentUserId, fetchUnreadCount, maybeShowBrowserNotification])
+
+  useEffect(() => {
+    if (!currentUserId || notificationSocketConnected) return
+
+    const interval = window.setInterval(() => {
+      fetchUnreadCount()
+    }, 20000)
+
+    return () => {
+      window.clearInterval(interval)
+    }
+  }, [currentUserId, fetchUnreadCount, notificationSocketConnected])
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,14 +319,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <nav className="flex-1 px-4 py-6 space-y-2">
               {navigation.map((item) => (
                 <Link key={item.name} href={item.href}>
+                  {(() => {
+                    const isPulseChatItem = item.href === '/dashboard/chats'
+                    const showUnread = isPulseChatItem && unreadPulseCount > 0
+
+                    return (
                   <div className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    pathname === item.href
+                    activePathname === item.href
                       ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}>
                     <item.icon className="h-5 w-5 mr-3" />
-                    {item.name}
+                    <span className="flex items-center gap-2">
+                      <span>{item.name}</span>
+                      {showUnread ? (
+                        <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                          {formatUnreadCount(unreadPulseCount)}
+                        </span>
+                      ) : null}
+                    </span>
                   </div>
+                    )
+                  })()}
                 </Link>
               ))}
             </nav>
@@ -157,18 +390,35 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <nav className={`flex-1 py-6 space-y-2 transition-[padding] duration-200 ${isDesktopExpanded ? 'px-4' : 'px-2'}`}>
             {navigation.map((item) => (
               <Link key={item.name} href={item.href}>
-                <div className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
+                {(() => {
+                  const isPulseChatItem = item.href === '/dashboard/chats'
+                  const showUnread = isPulseChatItem && unreadPulseCount > 0
+
+                  return (
+                <div className={`relative flex items-center rounded-lg text-sm font-medium transition-colors ${
                   isDesktopExpanded ? 'px-3 py-2 justify-start' : 'px-0 py-2 justify-center'
                 } ${
-                  pathname === item.href
+                  activePathname === item.href
                     ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}>
                   <item.icon className={`h-5 w-5 shrink-0 ${isDesktopExpanded ? 'mr-3' : ''}`} />
                   {isDesktopExpanded ? (
-                    <span className="whitespace-nowrap">{item.name}</span>
+                    <span className="flex items-center gap-2 whitespace-nowrap">
+                      <span>{item.name}</span>
+                      {showUnread ? (
+                        <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                          {formatUnreadCount(unreadPulseCount)}
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : null}
+                  {!isDesktopExpanded && showUnread ? (
+                    <span className="absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full bg-blue-600" />
                   ) : null}
                 </div>
+                  )
+                })()}
               </Link>
             ))}
           </nav>
@@ -194,6 +444,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             
             <div className="flex items-center gap-4">
               <SimpleThemeToggle />
+              {notificationsSupported && notificationPermission !== 'granted' ? (
+                <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={handleEnableBrowserAlerts}>
+                  <Bell className="h-4 w-4" />
+                  <span className="hidden sm:inline">Enable Alerts</span>
+                </Button>
+              ) : null}
               <Link href={`/${username ?? ''}`} target="_blank">
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
                   <Eye className="h-4 w-4" />
@@ -255,13 +511,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Page content */}
         <main className="flex-1">
           <div className="p-6 lg:p-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
+            <div>
               {children}
-            </motion.div>
+            </div>
           </div>
         </main>
       </div>

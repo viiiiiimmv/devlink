@@ -7,7 +7,6 @@ import { Plus, Edit, Trash2, BookOpen, ExternalLink, Calendar } from 'lucide-rea
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import DashboardLayout from '@/components/dashboard/layout'
 import ResearchFormMdoal from '@/components/modals/research-form-modal'
 import toast from 'react-hot-toast'
 
@@ -87,16 +86,16 @@ export default function ResearchesPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
-      </DashboardLayout>
+      
     )
   }
 
   return (
-    <DashboardLayout>
+    
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -193,6 +192,6 @@ export default function ResearchesPage() {
           research={editingResearch}
         />
       </div>
-    </DashboardLayout>
+    
   )
 }

@@ -9,7 +9,6 @@ import { Save, Trash2, AlertTriangle, X, Check, Download, FileText, Lock, KeyRou
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import DashboardLayout from '@/components/dashboard/layout'
 import toast from 'react-hot-toast'
 import { isValidUsername, normalizeUsernameInput, USERNAME_VALIDATION_MESSAGE } from '@/lib/username'
 import { useSiteUrl } from '@/hooks/use-site-url'
@@ -339,16 +338,16 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
-      </DashboardLayout>
+      
     )
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -739,6 +738,6 @@ export default function SettingsPage() {
           </motion.div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   )
 }

@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { Github, Linkedin, FileJson, Search, CheckCircle2, XCircle } from 'lucide-react'
-import DashboardLayout from '@/components/dashboard/layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -381,7 +380,7 @@ export default function ImportPage() {
   }
 
   return (
-    <DashboardLayout>
+    
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -686,6 +685,6 @@ export default function ImportPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+    
   )
 }

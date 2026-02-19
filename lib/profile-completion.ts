@@ -17,6 +17,7 @@ type ProfilePhoto = {
   publicId?: string
 }
 
+
 type SectionSetting = {
   id: string
   visible: boolean

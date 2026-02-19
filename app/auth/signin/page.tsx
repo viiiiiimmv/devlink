@@ -41,8 +41,8 @@ function SignInContent() {
   const [providersLoading, setProvidersLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const error = searchParams.get('error')
-  const from = searchParams.get('from')
+  const error = searchParams?.get('error') ?? null
+  const from = searchParams?.get('from') ?? null
 
   useEffect(() => {
     if (error) {

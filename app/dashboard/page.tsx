@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, Settings, Eye, ExternalLink, BarChart3, Palette, CircleDashed, CheckCircle2, TrendingUp, Mail, Activity, Sparkles } from 'lucide-react'
+import { Plus, Settings, Eye, ExternalLink, BarChart3, Palette, CircleDashed, CheckCircle2, TrendingUp, Mail, Activity, Sparkles, Bell, MessageCircle, UsersRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,9 +12,9 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
 import Link from 'next/link'
-import DashboardLayout from '@/components/dashboard/layout'
 import { calculateProfileCompletion } from '@/lib/profile-completion'
 import { useSiteUrl } from '@/hooks/use-site-url'
+import { connectChatSocket, getChatSocket } from '@/lib/socket-client'
 
 interface Profile {
   username: string
@@ -86,6 +86,37 @@ interface ActivityItem {
   createdAt: string
 }
 
+interface NetworkConnectionItem {
+  connectionId: string
+  peerUserId: string
+  peerUsername: string
+  peerName: string
+  peerImage?: string
+  status: 'pending' | 'accepted'
+  createdAt: string
+  updatedAt: string
+}
+
+interface ChatConversationItem {
+  id: string
+  lastMessageText: string
+  lastMessageAt: string
+  unreadCount: number
+  peer?: {
+    name?: string
+    username?: string
+  } | null
+}
+
+interface DashboardNotificationItem {
+  id: string
+  type: 'spark' | 'message'
+  title: string
+  description: string
+  href: string
+  createdAt: string
+}
+
 export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -94,14 +125,33 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null)
   const [inquiries, setInquiries] = useState<InquiryItem[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [notificationItems, setNotificationItems] = useState<DashboardNotificationItem[]>([])
+  const [incomingSparkCount, setIncomingSparkCount] = useState(0)
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+  const [notificationLoading, setNotificationLoading] = useState(false)
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [publishSaving, setPublishSaving] = useState(false)
   const siteUrl = useSiteUrl()
+  const currentUserId = typeof session?.user?.id === 'string' ? session.user.id : ''
 
   // Type guard for session user
   const hasUsername = (session: any): session is { user: { username: string } } => {
     return typeof session?.user?.username === 'string' && session.user.username.trim().length > 0
   }
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const response = await fetch('/api/profile')
+      if (response.ok) {
+        const data = await response.json()
+        setProfile(data)
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (status === 'loading') return // Still loading session
@@ -124,23 +174,9 @@ export default function Dashboard() {
         return
       }
     }
-  }, [session, status, router])
+  }, [fetchProfile, session, status, router])
 
-  const fetchProfile = async () => {
-    try {
-      const response = await fetch('/api/profile')
-      if (response.ok) {
-        const data = await response.json()
-        setProfile(data)
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       const response = await fetch('/api/analytics?days=30')
       if (!response.ok) return
@@ -149,9 +185,9 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error fetching analytics:', error)
     }
-  }
+  }, [])
 
-  const fetchInquiries = async () => {
+  const fetchInquiries = useCallback(async () => {
     try {
       const response = await fetch('/api/inquiries?limit=6')
       if (!response.ok) return
@@ -160,9 +196,9 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error fetching inquiries:', error)
     }
-  }
+  }, [])
 
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     try {
       const response = await fetch('/api/activity?limit=8')
       if (!response.ok) return
@@ -171,18 +207,183 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error fetching activity:', error)
     }
-  }
+  }, [])
 
-  const refreshInsights = async () => {
+  const fetchDashboardNotifications = useCallback(async (options?: { silent?: boolean }) => {
+    try {
+      if (!options?.silent) {
+        setNotificationLoading(true)
+      }
+
+      const [networkResponse, chatResponse] = await Promise.all([
+        fetch('/api/network/connections', { cache: 'no-store' }),
+        fetch('/api/chat/conversations', { cache: 'no-store' }),
+      ])
+
+      if (!networkResponse.ok || !chatResponse.ok) {
+        throw new Error('Failed to fetch notifications')
+      }
+
+      const networkData = await networkResponse.json()
+      const chatData = await chatResponse.json()
+
+      const incomingSparks = Array.isArray(networkData?.incomingSparks)
+        ? networkData.incomingSparks as NetworkConnectionItem[]
+        : []
+      const conversations = Array.isArray(chatData?.conversations)
+        ? chatData.conversations as ChatConversationItem[]
+        : []
+
+      setIncomingSparkCount(incomingSparks.length)
+      const unreadCount = conversations.reduce((total, conversation) => {
+        const count = Number(conversation?.unreadCount ?? 0)
+        if (!Number.isFinite(count) || count <= 0) return total
+        return total + count
+      }, 0)
+      setUnreadMessageCount(unreadCount)
+
+      const sparkNotifications: DashboardNotificationItem[] = incomingSparks.slice(0, 4).map((spark) => ({
+        id: `spark-${spark.connectionId}`,
+        type: 'spark',
+        title: `Link Spark from ${spark.peerName}`,
+        description: `@${spark.peerUsername} wants to join your Code Circle`,
+        href: '/dashboard/network',
+        createdAt: spark.updatedAt || spark.createdAt || new Date().toISOString(),
+      }))
+
+      const chatNotifications: DashboardNotificationItem[] = conversations
+        .filter((conversation) => Number(conversation.unreadCount || 0) > 0)
+        .slice(0, 6)
+        .map((conversation) => ({
+          id: `message-${conversation.id}`,
+          type: 'message',
+          title: `Unread from ${conversation.peer?.name || 'a contact'}`,
+          description: conversation.lastMessageText || `${conversation.unreadCount} unread message(s)`,
+          href: `/dashboard/chats?conversation=${encodeURIComponent(conversation.id)}`,
+          createdAt: conversation.lastMessageAt || new Date().toISOString(),
+        }))
+
+      const mergedNotifications = [...sparkNotifications, ...chatNotifications]
+        .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+        .slice(0, 10)
+
+      setNotificationItems(mergedNotifications)
+    } catch (error) {
+      console.error('Error fetching dashboard notifications:', error)
+      if (!options?.silent) {
+        toast.error('Unable to load live notifications right now')
+      }
+    } finally {
+      if (!options?.silent) {
+        setNotificationLoading(false)
+      }
+    }
+  }, [])
+
+  const refreshInsights = useCallback(async () => {
     setInsightsLoading(true)
-    await Promise.all([fetchAnalytics(), fetchInquiries(), fetchActivities()])
+    await Promise.all([fetchAnalytics(), fetchInquiries(), fetchActivities(), fetchDashboardNotifications()])
     setInsightsLoading(false)
-  }
+  }, [fetchActivities, fetchAnalytics, fetchDashboardNotifications, fetchInquiries])
 
   useEffect(() => {
     if (!profile?.username) return
     refreshInsights()
-  }, [profile?.username])
+  }, [profile?.username, refreshInsights])
+
+  useEffect(() => {
+    if (!currentUserId) return
+
+    let isMounted = true
+    let detachListeners: (() => void) | null = null
+
+    const setupRealtimeNotifications = async () => {
+      try {
+        const socket = await connectChatSocket()
+        if (!isMounted) return
+
+        const handleNetworkUpdate = (payload: {
+          type: 'spark_incoming' | 'spark_accepted' | 'spark_declined' | 'spark_canceled' | 'connection_removed'
+          connectionId: string
+          fromUserId: string
+          fromUsername: string
+          fromName: string
+          toUserId: string
+          at: string
+        }) => {
+          if (payload.type === 'spark_incoming') {
+            const createdAt = payload.at || new Date().toISOString()
+            const liveSparkNotification: DashboardNotificationItem = {
+              id: `spark-live-${payload.connectionId}-${createdAt}`,
+              type: 'spark',
+              title: `New Link Spark from ${payload.fromName}`,
+              description: `@${payload.fromUsername} sent you a connection request`,
+              href: '/dashboard/network',
+              createdAt,
+            }
+            setNotificationItems((previous) => ([
+              liveSparkNotification,
+              ...previous,
+            ]).slice(0, 10))
+            toast.success(`New Link Spark from ${payload.fromName}`)
+          }
+
+          fetchDashboardNotifications({ silent: true })
+        }
+
+        const handleConversationUpdate = (payload: {
+          conversationId: string
+          lastMessageText: string
+          lastMessageAt: string
+          lastMessageSenderId: string
+          senderName: string
+        }) => {
+          if (payload.lastMessageSenderId === currentUserId) return
+
+          const createdAt = payload.lastMessageAt || new Date().toISOString()
+          const liveMessageNotification: DashboardNotificationItem = {
+            id: `message-live-${payload.conversationId}-${createdAt}`,
+            type: 'message',
+            title: `Message from ${payload.senderName}`,
+            description: payload.lastMessageText || 'You have a new message',
+            href: `/dashboard/chats?conversation=${encodeURIComponent(payload.conversationId)}`,
+            createdAt,
+          }
+          setNotificationItems((previous) => ([
+            liveMessageNotification,
+            ...previous,
+          ]).slice(0, 10))
+
+          fetchDashboardNotifications({ silent: true })
+        }
+
+        const handleRead = () => {
+          fetchDashboardNotifications({ silent: true })
+        }
+
+        socket.on('network:connection:update', handleNetworkUpdate)
+        socket.on('chat:conversation:update', handleConversationUpdate)
+        socket.on('chat:read', handleRead)
+
+        detachListeners = () => {
+          socket.off('network:connection:update', handleNetworkUpdate)
+          socket.off('chat:conversation:update', handleConversationUpdate)
+          socket.off('chat:read', handleRead)
+        }
+      } catch (error) {
+        console.error('Dashboard realtime notification setup failed:', error)
+      }
+    }
+
+    setupRealtimeNotifications()
+
+    return () => {
+      isMounted = false
+      if (detachListeners) {
+        detachListeners()
+      }
+    }
+  }, [currentUserId, fetchDashboardNotifications])
 
   const handlePublishToggle = async (nextValue: boolean) => {
     if (!profile) return
@@ -379,7 +580,7 @@ export default function Dashboard() {
   })()
 
   return (
-    <DashboardLayout>
+    
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -432,7 +633,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -546,6 +747,72 @@ export default function Dashboard() {
                     </div>
                   )
                 })
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-indigo-600" />
+                Live Notifications
+              </CardTitle>
+              <CardDescription>
+                Realtime updates for Link Sparks and Pulse Chat.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Link href="/dashboard/network" className="rounded-lg border border-border p-3 transition-colors hover:bg-muted/40">
+                  <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    <UsersRound className="h-3.5 w-3.5" />
+                    New Sparks
+                  </p>
+                  <p className="text-xl font-bold text-foreground">{incomingSparkCount}</p>
+                </Link>
+                <Link href="/dashboard/chats" className="rounded-lg border border-border p-3 transition-colors hover:bg-muted/40">
+                  <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Unread Chats
+                  </p>
+                  <p className="text-xl font-bold text-foreground">{unreadMessageCount}</p>
+                </Link>
+              </div>
+
+              {notificationLoading ? (
+                <p className="text-sm text-muted-foreground">Loading notifications...</p>
+              ) : notificationItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No active notifications right now.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {notificationItems.slice(0, 6).map((item) => (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className="block rounded-lg border border-border p-3 transition-colors hover:bg-muted/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">{item.description}</p>
+                        </div>
+                        <Badge variant={item.type === 'spark' ? 'default' : 'secondary'}>
+                          {item.type === 'spark' ? 'Spark' : 'Message'}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        {new Date(item.createdAt).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -821,6 +1088,6 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
-    </DashboardLayout>
+    
   )
 }

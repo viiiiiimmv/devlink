@@ -128,7 +128,7 @@ function PinContent() {
   const [showRecovery, setShowRecovery] = useState(false)
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([])
 
-  const rawFrom = searchParams.get('from') || '/dashboard'
+  const rawFrom = searchParams?.get('from') || '/dashboard'
   const redirectTo = rawFrom.startsWith('/') ? rawFrom : '/dashboard'
 
   useEffect(() => {

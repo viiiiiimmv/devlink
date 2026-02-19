@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
 import { db } from '@/lib/db'
+import { sendWelcomeEmailOnce } from '@/lib/transactional-email'
 import type { OAuthProvider } from '@/models/User'
 
 const getEnv = (...keys: string[]): string | undefined => {
@@ -81,6 +82,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       try {
+        const existingUser = await db.findUser(email)
         const dbUser = await db.upsertOAuthUser({
           email,
           name: user.name,
@@ -94,6 +96,15 @@ export const authOptions: NextAuthOptions = {
             email,
           })
           return false
+        }
+
+        if (!existingUser) {
+          void sendWelcomeEmailOnce({
+            toEmail: dbUser.email,
+            name: dbUser.name,
+          }).catch((error) => {
+            console.error('Welcome email dispatch failed:', error)
+          })
         }
       } catch (error) {
         console.error('SignIn error: OAuth user upsert failed:', error)

@@ -4,7 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import connectDB from '@/lib/mongodb'
 import Inquiry from '@/models/Inquiry'
+import User from '@/models/User'
 import { logActivity } from '@/lib/activity'
+import { sendInquiryReceivedEmail } from '@/lib/transactional-email'
 
 const getUsernameFromSession = async (session: any): Promise<string | undefined> => {
   if (session && session.user) {
@@ -62,6 +64,25 @@ export async function POST(request: NextRequest): Promise<Response> {
       type: 'inquiry',
       message: `New inquiry from ${name}`,
       metadata: { inquiryId: inquiry._id?.toString?.() ?? undefined },
+    })
+
+    const profileOwner = await User.findById(profile.userId)
+      .select('email name username')
+      .lean() as {
+      email?: string
+      name?: string
+      username?: string
+    } | null
+
+    void sendInquiryReceivedEmail({
+      toEmail: profileOwner?.email,
+      toName: profileOwner?.name || profile.name || profile.username,
+      senderName: name,
+      senderEmail: email,
+      message,
+      username: profile.username,
+    }).catch((error) => {
+      console.error('Inquiry email dispatch failed:', error)
     })
 
     return NextResponse.json({ success: true })
