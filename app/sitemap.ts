@@ -22,6 +22,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: absoluteUrl('/sparkforge'),
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.85,
+    },
+    {
       url: absoluteUrl('/auth/signin'),
       lastModified: now,
       changeFrequency: 'monthly',

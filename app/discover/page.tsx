@@ -118,6 +118,11 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
 
           <div className="flex items-center gap-2 sm:gap-3">
             <SimpleThemeToggle />
+            <Link href="/sparkforge" className="hidden sm:inline-flex">
+              <Button variant="ghost">
+                SparkForge
+              </Button>
+            </Link>
             <Link href="/auth/signin">
               <Button variant="ghost" className="hidden sm:inline-flex">
                 Sign In
@@ -149,6 +154,13 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
               </h1>
               <p className="max-w-3xl text-muted-foreground">
                 Search by name, username, bio, or skills to find developers and explore their public work.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Want to discover active build concepts?{' '}
+                <Link href="/sparkforge" className="font-semibold text-blue-600 hover:text-blue-700">
+                  Open SparkForge
+                </Link>
+                .
               </p>
             </div>
           </section>

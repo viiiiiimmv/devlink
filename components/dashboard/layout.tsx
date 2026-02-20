@@ -22,7 +22,8 @@ import {
   ExternalLink,
   UsersRound,
   MessagesSquare,
-  Bell
+  Bell,
+  Lightbulb
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -59,6 +60,7 @@ type IncomingSparkSummary = {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'SparkForge', href: '/dashboard/sparkforge', icon: Lightbulb },
   { name: 'Profile', href: '/dashboard/profile', icon: User },
   { name: 'Projects', href: '/dashboard/projects', icon: Code },
   { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },

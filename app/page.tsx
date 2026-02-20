@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, Code2, Compass, Inbox, Sparkles, UsersRound, Zap } from 'lucide-react'
+import { ArrowRight, Code2, Compass, Inbox, Lightbulb, Sparkles, UsersRound, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,6 +21,13 @@ const launchPaths = [
     cta: 'Open discover',
   },
   {
+    icon: Lightbulb,
+    title: 'SparkForge',
+    text: 'Post ideas and find people to build with.',
+    href: '/sparkforge',
+    cta: 'Open SparkForge',
+  },
+  {
     icon: Inbox,
     title: 'Inbox',
     text: 'Run outreach and replies in one place.',
@@ -35,7 +42,7 @@ const previewStats = [
   { label: 'Pulse unread', value: '03' },
 ]
 
-const quickCapsules = ['Custom URL', 'Live inbox', 'Network sparks']
+const quickCapsules = ['Custom URL', 'Live inbox', 'Network sparks', 'SparkForge ideas']
 
 export default function Home() {
   return (
@@ -63,6 +70,9 @@ export default function Home() {
             <SimpleThemeToggle />
             <Link href="/discover" className="hidden sm:inline-flex">
               <Button variant="ghost">Discover</Button>
+            </Link>
+            <Link href="/sparkforge" className="hidden sm:inline-flex">
+              <Button variant="ghost">SparkForge</Button>
             </Link>
             <Link href="/auth/signin" className="hidden sm:inline-flex">
               <Button variant="ghost">Sign in</Button>
@@ -108,6 +118,11 @@ export default function Home() {
                 <Link href="/discover">
                   <Button size="lg" variant="outline">
                     Explore discover
+                  </Button>
+                </Link>
+                <Link href="/sparkforge">
+                  <Button size="lg" variant="outline">
+                    Explore SparkForge
                   </Button>
                 </Link>
               </div>
@@ -180,7 +195,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {launchPaths.map((path) => (
               <Card
                 key={path.title}
