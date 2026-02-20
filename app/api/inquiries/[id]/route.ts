@@ -20,6 +20,30 @@ const getUsernameFromSession = async (session: any): Promise<string | undefined>
   return undefined
 }
 
+const normalizeTag = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24)
+
+const normalizeTags = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+
+  const unique = new Set<string>()
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue
+    const normalized = normalizeTag(entry)
+    if (!normalized) continue
+    unique.add(normalized)
+    if (unique.size >= 8) break
+  }
+  return Array.from(unique)
+}
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -38,30 +62,101 @@ export async function PATCH(
     }
 
     const body = await request.json().catch(() => null)
-    const status = typeof body?.status === 'string' ? body.status.trim() : ''
-    if (!['new', 'replied'].includes(status)) {
+    const incomingStatus = typeof body?.status === 'string' ? body.status.trim() : undefined
+    const hasStatusUpdate = typeof incomingStatus === 'string'
+    if (hasStatusUpdate && !['new', 'replied'].includes(incomingStatus)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
+    const hasArchivedUpdate = Object.prototype.hasOwnProperty.call(body ?? {}, 'archived')
+    const incomingArchived = body?.archived
+    if (hasArchivedUpdate && typeof incomingArchived !== 'boolean') {
+      return NextResponse.json({ error: 'Invalid archived state' }, { status: 400 })
+    }
+
+    const hasTagsUpdate = Object.prototype.hasOwnProperty.call(body ?? {}, 'tags')
+    const normalizedTags = hasTagsUpdate ? normalizeTags(body?.tags) : undefined
+
+    const addTagRaw = typeof body?.addTag === 'string' ? body.addTag : ''
+    const addTag = normalizeTag(addTagRaw)
+    if (addTagRaw && !addTag) {
+      return NextResponse.json({ error: 'Invalid tag format' }, { status: 400 })
+    }
+
+    const removeTagRaw = typeof body?.removeTag === 'string' ? body.removeTag : ''
+    const removeTag = normalizeTag(removeTagRaw)
+    if (removeTagRaw && !removeTag) {
+      return NextResponse.json({ error: 'Invalid tag format' }, { status: 400 })
+    }
+
+    if (!hasStatusUpdate && !hasArchivedUpdate && !hasTagsUpdate && !addTag && !removeTag) {
+      return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 })
+    }
+
     await connectDB()
-    const inquiry = await Inquiry.findOneAndUpdate(
-      { _id: inquiryId, username },
-      { status },
-      { new: true }
-    ).lean()
+    const inquiry = await Inquiry.findOne({ _id: inquiryId, username })
 
     if (!inquiry) {
       return NextResponse.json({ error: 'Inquiry not found' }, { status: 404 })
     }
 
+    let didUpdate = false
+    const activityNotes: string[] = []
+
+    if (hasStatusUpdate && inquiry.status !== incomingStatus) {
+      inquiry.status = incomingStatus as 'new' | 'replied'
+      didUpdate = true
+      activityNotes.push(incomingStatus === 'replied' ? 'marked as replied' : 'reopened')
+    }
+
+    if (hasArchivedUpdate && inquiry.archived !== incomingArchived) {
+      inquiry.archived = incomingArchived
+      inquiry.archivedAt = incomingArchived ? new Date() : null
+      didUpdate = true
+      activityNotes.push(incomingArchived ? 'archived' : 'unarchived')
+    }
+
+    if (hasTagsUpdate) {
+      inquiry.tags = normalizedTags || []
+      didUpdate = true
+      activityNotes.push('updated tags')
+    }
+
+    if (addTag) {
+      const currentTags = Array.isArray(inquiry.tags) ? inquiry.tags : []
+      if (!currentTags.includes(addTag)) {
+        if (currentTags.length >= 8) {
+          return NextResponse.json({ error: 'Maximum 8 tags allowed per inquiry' }, { status: 400 })
+        }
+        inquiry.tags = [...currentTags, addTag]
+        didUpdate = true
+        activityNotes.push(`added tag "${addTag}"`)
+      }
+    }
+
+    if (removeTag) {
+      const currentTags = Array.isArray(inquiry.tags) ? inquiry.tags : []
+      if (currentTags.includes(removeTag)) {
+        inquiry.tags = currentTags.filter((tag: string) => tag !== removeTag)
+        didUpdate = true
+        activityNotes.push(`removed tag "${removeTag}"`)
+      }
+    }
+
+    if (didUpdate) {
+      await inquiry.save()
+    }
+
     await logActivity({
       username,
       type: 'inquiry_update',
-      message: status === 'replied' ? 'Marked inquiry as replied' : 'Reopened inquiry',
+      message: activityNotes.length > 0
+        ? `Updated inquiry: ${activityNotes.join(', ')}`
+        : 'Viewed inquiry',
       metadata: { inquiryId },
     })
 
-    return NextResponse.json({ inquiry })
+    return NextResponse.json({ inquiry: inquiry.toObject() })
   } catch (error) {
     console.error('Inquiry update error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

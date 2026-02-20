@@ -133,7 +133,23 @@ class Database {
       customTheme,
       contactCta,
       sectionSettings: normalizeSectionSettings(profile.sectionSettings),
-      projects: profile.projects?.map((project: any) => ({ ...project, _id: undefined })) || [],
+      projects: profile.projects?.map((project: any) => ({
+        ...project,
+        _id: undefined,
+        caseStudy: typeof project.caseStudy === 'string' ? project.caseStudy : '',
+        gallery: Array.isArray(project.gallery)
+          ? project.gallery.map((item: any) => ({
+            ...item,
+            _id: undefined,
+          }))
+          : [],
+        metrics: Array.isArray(project.metrics)
+          ? project.metrics.map((metric: any) => ({
+            ...metric,
+            _id: undefined,
+          }))
+          : [],
+      })) || [],
       experiences: profile.experiences?.map((experience: any) => ({ ...experience, _id: undefined })) || [],
       certifications: profile.certifications?.map((certification: any) => ({ ...certification, _id: undefined })) || [],
       researches: profile.researches?.map((research: any) => ({ ...research, _id: undefined })) || [],
@@ -472,11 +488,21 @@ class Database {
   async getAllProfiles(limit: number = 10, skip: number = 0): Promise<IProfile[]> {
     try {
       await connectDB()
+
+      const safeLimit = Number.isFinite(limit)
+        ? Math.min(Math.max(Math.floor(limit), 1), 50)
+        : 10
+      const safeSkip = Number.isFinite(skip)
+        ? Math.max(Math.floor(skip), 0)
+        : 0
+
       const profiles = await Profile.find({ isPublished: true })
-        .select('username name bio skills theme profileImage')
-        .limit(limit)
-        .skip(skip)
+        .select('username name bio skills theme template profileImage profilePhoto updatedAt')
+        .sort({ updatedAt: -1 })
+        .limit(safeLimit)
+        .skip(safeSkip)
         .lean()
+
       return profiles.map(profile => this.serializeProfile(profile))
     } catch (error) {
       console.error('Error getting all profiles:', error)
@@ -484,21 +510,39 @@ class Database {
     }
   }
 
-  async searchProfiles(query: string, limit: number = 10): Promise<IProfile[]> {
+  async searchProfiles(query: string, limit: number = 10, skip: number = 0): Promise<IProfile[]> {
     try {
       await connectDB()
+
+      const trimmedQuery = query.trim()
+      if (!trimmedQuery) {
+        return this.getAllProfiles(limit, skip)
+      }
+
+      const safeLimit = Number.isFinite(limit)
+        ? Math.min(Math.max(Math.floor(limit), 1), 50)
+        : 10
+      const safeSkip = Number.isFinite(skip)
+        ? Math.max(Math.floor(skip), 0)
+        : 0
+      const escapedQuery = trimmedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const queryRegex = new RegExp(escapedQuery, 'i')
+
       const profiles = await Profile.find({
         isPublished: true,
         $or: [
-          { name: { $regex: query, $options: 'i' } },
-          { bio: { $regex: query, $options: 'i' } },
-          { skills: { $in: [new RegExp(query, 'i')] } },
-          { username: { $regex: query, $options: 'i' } }
+          { name: { $regex: queryRegex } },
+          { bio: { $regex: queryRegex } },
+          { skills: { $in: [queryRegex] } },
+          { username: { $regex: queryRegex } }
         ]
       })
-        .select('username name bio skills theme profileImage')
-        .limit(limit)
+        .select('username name bio skills theme template profileImage profilePhoto updatedAt')
+        .sort({ updatedAt: -1 })
+        .limit(safeLimit)
+        .skip(safeSkip)
         .lean()
+
       return profiles.map(profile => this.serializeProfile(profile))
     } catch (error) {
       console.error('Error searching profiles:', error)

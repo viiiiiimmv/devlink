@@ -83,6 +83,11 @@ export default function NetworkPage() {
     fromUsername: string
     at: string
   } | null>(null)
+  const [sparkSuccessNotice, setSparkSuccessNotice] = useState<{
+    name: string
+    username: string
+    state: 'pending_outgoing' | 'connected'
+  } | null>(null)
 
   const connectionStateByUserId = useMemo(() => {
     const lookup = new Map<string, { state: ConnectionState; connectionId: string }>()
@@ -148,26 +153,14 @@ export default function NetworkPage() {
 
       const data = await response.json()
       const incomingResults = (Array.isArray(data?.results) ? data.results : []) as SearchResult[]
-
-      const mergedResults: SearchResult[] = incomingResults.map((item: SearchResult) => {
-        const knownState = connectionStateByUserId.get(item.userId)
-        if (!knownState) return item
-
-        return {
-          ...item,
-          connectionState: knownState.state,
-          connectionId: knownState.connectionId,
-        }
-      })
-
-      setSearchResults(mergedResults)
+      setSearchResults(incomingResults)
     } catch (error) {
       console.error(error)
       toast.error('Search is temporarily unavailable')
     } finally {
       setSearching(false)
     }
-  }, [connectionStateByUserId])
+  }, [])
 
   useEffect(() => {
     fetchConnections()
@@ -182,6 +175,42 @@ export default function NetworkPage() {
       window.clearTimeout(timer)
     }
   }, [fetchSearch, query])
+
+  useEffect(() => {
+    setSearchResults((previous) => {
+      let changed = false
+      const next = previous.map((item) => {
+        const knownState = connectionStateByUserId.get(item.userId)
+        const nextState: ConnectionState = knownState?.state ?? 'none'
+        const nextConnectionId = knownState?.connectionId
+
+        if (item.connectionState === nextState && item.connectionId === nextConnectionId) {
+          return item
+        }
+
+        changed = true
+        return {
+          ...item,
+          connectionState: nextState,
+          connectionId: nextConnectionId,
+          canMessage: nextState === 'connected',
+        }
+      })
+
+      return changed ? next : previous
+    })
+  }, [connectionStateByUserId])
+
+  useEffect(() => {
+    if (!sparkSuccessNotice) return
+    const timer = window.setTimeout(() => {
+      setSparkSuccessNotice(null)
+    }, 2600)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [sparkSuccessNotice])
 
   useEffect(() => {
     let mounted = true
@@ -240,8 +269,31 @@ export default function NetworkPage() {
         throw new Error(data?.error || 'Failed to send request')
       }
 
-      await Promise.all([fetchConnections(), fetchSearch(query)])
-      toast.success(data?.state === 'connected' ? 'Code Circle established' : 'Link Spark sent')
+      const nextState: 'pending_outgoing' | 'connected' =
+        data?.state === 'connected' ? 'connected' : 'pending_outgoing'
+      const nextConnectionId = typeof data?.connectionId === 'string' ? data.connectionId : undefined
+      const target = searchResults.find((item) => item.userId === targetUserId)
+
+      setSearchResults((previous) =>
+        previous.map((item) =>
+          item.userId === targetUserId
+            ? {
+              ...item,
+              connectionState: nextState,
+              connectionId: nextConnectionId ?? item.connectionId,
+              canMessage: nextState === 'connected',
+            }
+            : item
+        )
+      )
+
+      setSparkSuccessNotice({
+        name: target?.name || 'Developer',
+        username: target?.username || '',
+        state: nextState,
+      })
+
+      await fetchConnections({ silent: true })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to send request')
     } finally {
@@ -400,6 +452,19 @@ export default function NetworkPage() {
               </div>
             </CardContent>
           </Card>
+        ) : null}
+
+        {sparkSuccessNotice ? (
+          <div className="fixed bottom-6 right-6 z-50 w-[280px] rounded-xl border border-emerald-200/80 bg-emerald-50/95 p-3 shadow-lg backdrop-blur dark:border-emerald-900 dark:bg-emerald-950/80">
+            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              {sparkSuccessNotice.state === 'connected' ? 'Code Circle established' : 'Link Spark sent'}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {sparkSuccessNotice.username
+                ? `${sparkSuccessNotice.name} (@${sparkSuccessNotice.username})`
+                : sparkSuccessNotice.name}
+            </p>
+          </div>
         ) : null}
 
         <Card>

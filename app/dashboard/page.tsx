@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, Settings, Eye, ExternalLink, BarChart3, Palette, CircleDashed, CheckCircle2, TrendingUp, Mail, Activity, Sparkles, Bell, MessageCircle, UsersRound } from 'lucide-react'
+import { Plus, Settings, Eye, ExternalLink, BarChart3, Palette, CircleDashed, CheckCircle2, TrendingUp, Mail, Activity, Sparkles, Bell, MessageCircle, UsersRound, Archive, ArchiveRestore, Send, Tag, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
+import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { calculateProfileCompletion } from '@/lib/profile-completion'
 import { useSiteUrl } from '@/hooks/use-site-url'
@@ -77,7 +78,19 @@ interface InquiryItem {
   email: string
   message: string
   status: 'new' | 'replied'
+  tags?: string[]
+  archived?: boolean
+  archivedAt?: string | null
+  lastQuickReplyAt?: string | null
   createdAt: string
+}
+
+interface InquirySummary {
+  total: number
+  new: number
+  replied: number
+  archived: number
+  unarchived: number
 }
 
 interface ActivityItem {
@@ -124,6 +137,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null)
   const [inquiries, setInquiries] = useState<InquiryItem[]>([])
+  const [inquirySummary, setInquirySummary] = useState<InquirySummary>({
+    total: 0,
+    new: 0,
+    replied: 0,
+    archived: 0,
+    unarchived: 0,
+  })
+  const [showArchivedInquiries, setShowArchivedInquiries] = useState(false)
+  const [inquiryTagDrafts, setInquiryTagDrafts] = useState<Record<string, string>>({})
+  const [inquiryActioningId, setInquiryActioningId] = useState<string | null>(null)
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [notificationItems, setNotificationItems] = useState<DashboardNotificationItem[]>([])
   const [incomingSparkCount, setIncomingSparkCount] = useState(0)
@@ -189,14 +212,21 @@ export default function Dashboard() {
 
   const fetchInquiries = useCallback(async () => {
     try {
-      const response = await fetch('/api/inquiries?limit=6')
+      const response = await fetch(`/api/inquiries?limit=6&archived=${showArchivedInquiries ? 'true' : 'false'}`)
       if (!response.ok) return
       const data = await response.json()
       setInquiries(Array.isArray(data?.inquiries) ? data.inquiries : [])
+      setInquirySummary({
+        total: Number(data?.summary?.total || 0),
+        new: Number(data?.summary?.new || 0),
+        replied: Number(data?.summary?.replied || 0),
+        archived: Number(data?.summary?.archived || 0),
+        unarchived: Number(data?.summary?.unarchived || 0),
+      })
     } catch (error) {
       console.error('Error fetching inquiries:', error)
     }
-  }, [])
+  }, [showArchivedInquiries])
 
   const fetchActivities = useCallback(async () => {
     try {
@@ -385,6 +415,28 @@ export default function Dashboard() {
     }
   }, [currentUserId, fetchDashboardNotifications])
 
+  useEffect(() => {
+    if (!currentUserId) return
+
+    const syncNotifications = () => {
+      if (document.visibilityState !== 'visible') return
+      fetchDashboardNotifications({ silent: true })
+    }
+
+    const interval = window.setInterval(() => {
+      fetchDashboardNotifications({ silent: true })
+    }, 25000)
+
+    window.addEventListener('focus', syncNotifications)
+    document.addEventListener('visibilitychange', syncNotifications)
+
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', syncNotifications)
+      document.removeEventListener('visibilitychange', syncNotifications)
+    }
+  }, [currentUserId, fetchDashboardNotifications])
+
   const handlePublishToggle = async (nextValue: boolean) => {
     if (!profile) return
     setPublishSaving(true)
@@ -412,23 +464,93 @@ export default function Dashboard() {
     }
   }
 
-  const handleInquiryStatus = async (id: string, status: 'new' | 'replied') => {
+  const normalizeTagLabel = (value: string): string =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 24)
+
+  const patchInquiry = async (
+    id: string,
+    payload: Record<string, unknown>,
+    successMessage?: string
+  ): Promise<boolean> => {
+    setInquiryActioningId(id)
     try {
       const response = await fetch(`/api/inquiries/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(payload),
       })
+      const data = await response.json().catch(() => null)
       if (!response.ok) {
-        const data = await response.json().catch(() => null)
         throw new Error(data?.error || 'Failed to update inquiry')
       }
-      setInquiries((prev) =>
-        prev.map((item) => item._id === id ? { ...item, status } : item)
-      )
-      await fetchActivities()
+
+      if (successMessage) {
+        toast.success(successMessage)
+      }
+      await Promise.all([fetchInquiries(), fetchActivities()])
+      return true
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update inquiry')
+      return false
+    } finally {
+      setInquiryActioningId(null)
+    }
+  }
+
+  const handleInquiryStatus = async (id: string, status: 'new' | 'replied') => {
+    await patchInquiry(id, { status }, status === 'replied' ? 'Marked as replied' : 'Marked as new')
+  }
+
+  const handleInquiryArchive = async (id: string, archived: boolean) => {
+    await patchInquiry(id, { archived }, archived ? 'Inquiry archived' : 'Inquiry restored')
+  }
+
+  const handleAddTag = async (id: string) => {
+    const normalized = normalizeTagLabel(inquiryTagDrafts[id] || '')
+    if (!normalized) {
+      toast.error('Enter a valid tag first')
+      return
+    }
+
+    const ok = await patchInquiry(id, { addTag: normalized }, `Tag "${normalized}" added`)
+    if (ok) {
+      setInquiryTagDrafts((prev) => ({ ...prev, [id]: '' }))
+    }
+  }
+
+  const handleRemoveTag = async (id: string, tag: string) => {
+    await patchInquiry(id, { removeTag: tag }, `Tag "${tag}" removed`)
+  }
+
+  const handleQuickReply = async (
+    id: string,
+    template: 'thanks' | 'details' | 'availability'
+  ) => {
+    setInquiryActioningId(id)
+    try {
+      const response = await fetch(`/api/inquiries/${id}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template }),
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to send quick reply')
+      }
+
+      toast.success('Quick reply sent')
+      await Promise.all([fetchInquiries(), fetchActivities()])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send quick reply')
+    } finally {
+      setInquiryActioningId(null)
     }
   }
 
@@ -698,20 +820,52 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-rose-500" />
-                Inquiry Inbox
-              </CardTitle>
-              <CardDescription>Latest messages from your public profile.</CardDescription>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5 text-rose-500" />
+                    Inquiry Inbox
+                  </CardTitle>
+                  <CardDescription>Latest messages from your public profile.</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowArchivedInquiries((current) => !current)}
+                >
+                  {showArchivedInquiries ? (
+                    <>
+                      <ArchiveRestore className="mr-2 h-4 w-4" />
+                      Active
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="mr-2 h-4 w-4" />
+                      Archived
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">New: {inquirySummary.new}</Badge>
+                <Badge variant="secondary">Replied: {inquirySummary.replied}</Badge>
+                <Badge variant="outline">Archived: {inquirySummary.archived}</Badge>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {inquiries.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {insightsLoading ? 'Loading inquiries...' : 'No inquiries yet.'}
+                  {insightsLoading
+                    ? 'Loading inquiries...'
+                    : showArchivedInquiries
+                      ? 'No archived inquiries yet.'
+                      : 'No active inquiries yet.'}
                 </p>
               ) : (
                 inquiries.map((inquiry) => {
                   const subject = encodeURIComponent(`Re: ${profile?.name || 'DevLink'} portfolio inquiry`)
+                  const tags = Array.isArray(inquiry.tags) ? inquiry.tags : []
+                  const isActioning = inquiryActioningId === inquiry._id
                   return (
                     <div key={inquiry._id} className="rounded-lg border border-border p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -734,16 +888,126 @@ export default function Dashboard() {
                       <p className="text-sm text-muted-foreground">
                         {inquiry.message.length > 140 ? `${inquiry.message.slice(0, 140)}...` : inquiry.message}
                       </p>
+
+                      <div className="space-y-2">
+                        {tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {tags.map((tag) => (
+                              <Badge key={`${inquiry._id}-${tag}`} variant="secondary" className="gap-1 pr-1">
+                                <span>{tag}</span>
+                                <button
+                                  type="button"
+                                  className="inline-flex h-4 w-4 items-center justify-center rounded-sm hover:bg-black/10 dark:hover:bg-white/10"
+                                  onClick={() => handleRemoveTag(inquiry._id, tag)}
+                                  disabled={isActioning}
+                                  aria-label={`Remove tag ${tag}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Input
+                            value={inquiryTagDrafts[inquiry._id] || ''}
+                            onChange={(event) =>
+                              setInquiryTagDrafts((prev) => ({
+                                ...prev,
+                                [inquiry._id]: event.target.value,
+                              }))
+                            }
+                            placeholder="add-tag"
+                            className="h-8 w-[150px]"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleAddTag(inquiry._id)}
+                            disabled={isActioning}
+                          >
+                            <Tag className="mr-1.5 h-3.5 w-3.5" />
+                            Add tag
+                          </Button>
+                        </div>
+                      </div>
+
                       <div className="flex flex-wrap items-center gap-2">
                         <Button asChild variant="outline" size="sm">
                           <a href={`mailto:${inquiry.email}?subject=${subject}`}>Reply</a>
                         </Button>
-                        {inquiry.status === 'new' && (
-                          <Button size="sm" onClick={() => handleInquiryStatus(inquiry._id, 'replied')}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleQuickReply(inquiry._id, 'thanks')}
+                          disabled={isActioning}
+                        >
+                          <Send className="mr-1.5 h-3.5 w-3.5" />
+                          Quick: Thanks
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleQuickReply(inquiry._id, 'details')}
+                          disabled={isActioning}
+                        >
+                          Quick: Need details
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleQuickReply(inquiry._id, 'availability')}
+                          disabled={isActioning}
+                        >
+                          Quick: Availability
+                        </Button>
+                        {inquiry.status === 'new' ? (
+                          <Button
+                            size="sm"
+                            onClick={() => handleInquiryStatus(inquiry._id, 'replied')}
+                            disabled={isActioning}
+                          >
                             Mark replied
                           </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleInquiryStatus(inquiry._id, 'new')}
+                            disabled={isActioning}
+                          >
+                            Mark new
+                          </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleInquiryArchive(inquiry._id, inquiry.archived !== true)}
+                          disabled={isActioning}
+                        >
+                          {inquiry.archived ? (
+                            <>
+                              <ArchiveRestore className="mr-1.5 h-3.5 w-3.5" />
+                              Restore
+                            </>
+                          ) : (
+                            <>
+                              <Archive className="mr-1.5 h-3.5 w-3.5" />
+                              Archive
+                            </>
+                          )}
+                        </Button>
                       </div>
+                      {inquiry.lastQuickReplyAt ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Last quick reply: {new Date(inquiry.lastQuickReplyAt).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      ) : null}
                     </div>
                   )
                 })

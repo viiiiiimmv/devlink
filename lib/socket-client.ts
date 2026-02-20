@@ -92,7 +92,12 @@ export const connectChatSocket = async (): Promise<ChatSocket> => {
   }
 
   connectingPromise = (async () => {
-    await fetch('/api/socket', { method: 'GET', cache: 'no-store' })
+    try {
+      await fetch('/api/socket', { method: 'GET', cache: 'no-store' })
+    } catch (error) {
+      // Do not fail here; some deployments may not keep a warm socket bootstrap endpoint.
+      console.warn('Socket bootstrap endpoint failed:', error)
+    }
 
     const tokenResponse = await fetch('/api/chat/socket-token', {
       method: 'GET',
@@ -117,26 +122,42 @@ export const connectChatSocket = async (): Promise<ChatSocket> => {
 
     socket = io({
       path: '/api/socket/io',
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 4000,
       auth: {
         token,
       },
     }) as ChatSocket
 
     await new Promise<void>((resolve, reject) => {
-      const timeout = window.setTimeout(() => {
-        reject(new Error('Socket connection timeout'))
-      }, 8000)
+      let latestError: Error | null = null
 
-      socket?.once('connect', () => {
-        window.clearTimeout(timeout)
+      const handleConnect = () => {
+        cleanup()
         resolve()
-      })
+      }
 
-      socket?.once('connect_error', (error: Error) => {
+      const handleConnectError = (error: Error) => {
+        latestError = error
+      }
+
+      const cleanup = () => {
         window.clearTimeout(timeout)
-        reject(error)
-      })
+        socket?.off('connect', handleConnect)
+        socket?.off('connect_error', handleConnectError)
+      }
+
+      const timeout = window.setTimeout(() => {
+        cleanup()
+        reject(latestError || new Error('Socket connection timeout'))
+      }, 12000)
+
+      socket?.on('connect', handleConnect)
+      socket?.on('connect_error', handleConnectError)
     })
 
     return socket
@@ -144,6 +165,12 @@ export const connectChatSocket = async (): Promise<ChatSocket> => {
 
   try {
     return await connectingPromise
+  } catch (error) {
+    if (socket) {
+      socket.disconnect()
+      socket = null
+    }
+    throw error
   } finally {
     connectingPromise = null
   }

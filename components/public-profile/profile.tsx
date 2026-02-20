@@ -57,12 +57,29 @@ interface Project {
   id: string
   title: string
   description: string
+  caseStudy?: string
   technologies: string[]
   githubUrl?: string
   liveUrl?: string
   image?: string
   imagePublicId?: string
+  gallery?: ProjectGalleryImage[]
+  metrics?: ProjectMetric[]
   featured: boolean
+}
+
+interface ProjectGalleryImage {
+  id: string
+  url: string
+  caption?: string
+  publicId?: string
+}
+
+interface ProjectMetric {
+  id: string
+  label: string
+  value: string
+  detail?: string
 }
 
 interface Experience {
@@ -200,6 +217,21 @@ export default function PublicProfile({
       projectTitle: project.title,
       linkType,
       url: linkType === 'github' ? project.githubUrl : project.liveUrl,
+    })
+  }
+
+  const getCaseStudyHref = (project: Project) => {
+    return `/${encodeURIComponent(safeProfile.username)}/projects/${encodeURIComponent(project.id)}`
+  }
+
+  const handleCaseStudyClick = (project: Project) => {
+    const href = getCaseStudyHref(project)
+    sendAnalyticsEvent({
+      eventType: 'project_click',
+      projectId: project.id,
+      projectTitle: project.title,
+      linkType: 'case_study',
+      url: href,
     })
   }
 
@@ -718,6 +750,17 @@ export default function PublicProfile({
                             </span>
                           ))}
                         </div>
+                        <div className="mt-3">
+                          <Link
+                            href={getCaseStudyHref(project)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.12em]"
+                            style={{ color: themeColors.primary }}
+                            onClick={() => handleCaseStudyClick(project)}
+                          >
+                            View case study
+                            <ArrowUpRight className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -922,6 +965,14 @@ export default function PublicProfile({
                               open live
                             </Link>
                           )}
+                          <Link
+                            href={getCaseStudyHref(project)}
+                            className="hover:underline"
+                            style={{ color: themeColors.secondary }}
+                            onClick={() => handleCaseStudyClick(project)}
+                          >
+                            open case-study
+                          </Link>
                         </div>
                       </div>
                     ))}
@@ -1188,6 +1239,17 @@ export default function PublicProfile({
                         )}
                       </div>
                       {renderMarkdown(project.description, 'mt-2 text-sm text-white/80')}
+                      <div className="mt-3">
+                        <Link
+                          href={getCaseStudyHref(project)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.12em]"
+                          style={{ color: themeColors.primary }}
+                          onClick={() => handleCaseStudyClick(project)}
+                        >
+                          Case study
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -1806,6 +1868,20 @@ export default function PublicProfile({
                                           <ArrowUpRight className="w-4 h-4 transform group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
                                         </Link>
                                     )}
+                                    <Link
+                                        href={getCaseStudyHref(project)}
+                                        className="group/link flex items-center gap-2 text-white transition-colors"
+                                        onClick={() => handleCaseStudyClick(project)}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.color = themeColors.primary
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.color = 'white'
+                                        }}
+                                    >
+                                      <span className="mono text-sm font-bold">CASE STUDY</span>
+                                      <ArrowUpRight className="w-4 h-4 transform group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
+                                    </Link>
                                   </div>
                                 </div>
                               </div>

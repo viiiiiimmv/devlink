@@ -1,75 +1,58 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import Link from 'next/link'
-import {
-  ArrowRight,
-  Check,
-  Code,
-  Eye,
-  LayoutGrid,
-  Palette,
-  Share,
-  Sparkles,
-  Zap,
-} from 'lucide-react'
+import { ArrowRight, Code2, Compass, Inbox, Sparkles, UsersRound, Zap } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { SimpleThemeToggle } from '@/components/ui/theme-toggle'
-import { templateOptions, themeOptions } from '@/lib/profile-customization'
 
-const revealContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.12 },
+const launchPaths = [
+  {
+    icon: Zap,
+    title: 'Build',
+    text: 'Shape your profile and go live fast.',
+    href: '/auth/signin?from=/dashboard/setup',
+    cta: 'Start setup',
   },
-}
-
-const revealItem = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5 },
+  {
+    icon: Compass,
+    title: 'Discover',
+    text: 'Find developers and fresh portfolios.',
+    href: '/discover',
+    cta: 'Open discover',
   },
-}
+  {
+    icon: Inbox,
+    title: 'Inbox',
+    text: 'Run outreach and replies in one place.',
+    href: '/auth/signin?from=/dashboard',
+    cta: 'Open inbox',
+  },
+]
 
-const templatePreviewGradients: Record<string, string> = {
-  editorial: 'linear-gradient(140deg, #0f172a 0%, #334155 65%, #64748b 100%)',
-  bento: 'linear-gradient(140deg, #0f172a 0%, #0f4c81 55%, #00a3b9 100%)',
-  terminal: 'linear-gradient(140deg, #020617 0%, #052e16 55%, #166534 100%)',
-  glass: 'linear-gradient(140deg, #0b132b 0%, #1d4ed8 50%, #0ea5e9 100%)',
-}
+const previewStats = [
+  { label: 'Profile views', value: '2.4k' },
+  { label: 'New inquiries', value: '08' },
+  { label: 'Pulse unread', value: '03' },
+]
+
+const quickCapsules = ['Custom URL', 'Live inbox', 'Network sparks']
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
-
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-28 left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute top-[20rem] -left-24 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-amber-500/15 blur-3xl" />
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,hsl(221_83%_53%_/_0.10),transparent_58%)] dark:bg-[radial-gradient(circle_at_top,hsl(217_91%_60%_/_0.14),transparent_55%)]" />
+        <div className="absolute -top-24 left-[10%] h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute top-48 right-[6%] h-[26rem] w-[26rem] rounded-full bg-cyan-500/18 blur-3xl" />
+        <div className="absolute -bottom-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-sky-500/15 blur-3xl" />
       </div>
 
-      <motion.nav
-        className="fixed top-0 z-50 w-full border-b border-border/70 bg-background/80 backdrop-blur-xl"
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-      >
+      <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2">
-            <Code className="h-7 w-7 text-cyan-600" />
+            <Code2 className="h-6 w-6 text-blue-600" />
             <span
-              className="text-xl font-extrabold tracking-tight"
+              className="text-lg font-extrabold tracking-tight"
               style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
             >
               DevLink
@@ -78,347 +61,173 @@ export default function Home() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <SimpleThemeToggle />
-            <Link href="/auth/signin">
-              <Button variant="ghost" className="hidden sm:inline-flex">
-                Sign In
-              </Button>
+            <Link href="/discover" className="hidden sm:inline-flex">
+              <Button variant="ghost">Discover</Button>
+            </Link>
+            <Link href="/auth/signin" className="hidden sm:inline-flex">
+              <Button variant="ghost">Sign in</Button>
             </Link>
             <Link href="/auth/signin">
-              <Button className="bg-cyan-600 text-white hover:bg-cyan-700">Start Free</Button>
+              <Button className="bg-blue-600 text-white hover:bg-blue-700">Get started</Button>
             </Link>
           </div>
         </div>
-      </motion.nav>
+      </header>
 
-      <main className="relative z-10">
-        <section className="px-4 pb-16 pt-28 sm:px-6 lg:px-8 lg:pt-36">
-          <div className="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-12">
-            <motion.div
-              className="lg:col-span-6"
-              variants={revealContainer}
-              initial="hidden"
-              animate="visible"
-            >
-              <motion.div
-                variants={revealItem}
-                className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300"
-                style={{ fontFamily: '"IBM Plex Mono", "Menlo", "Consolas", monospace' }}
-              >
+      <main className="mx-auto w-full max-w-7xl space-y-10 px-4 pb-16 pt-8 sm:px-6 lg:px-8 lg:pt-10">
+        <section className="grid gap-6 lg:grid-cols-12 lg:items-stretch">
+          <Card className="relative overflow-hidden border-blue-200/70 bg-card/85 backdrop-blur lg:col-span-7 dark:border-blue-900/40">
+            <div className="pointer-events-none absolute -top-20 right-0 h-56 w-56 rounded-full bg-blue-500/15 blur-3xl" />
+            <CardContent className="space-y-6 p-7 sm:p-9">
+              <Badge className="w-fit gap-1.5 bg-blue-600/90 text-white hover:bg-blue-600">
                 <Sparkles className="h-3.5 w-3.5" />
-                New Portfolio System
-              </motion.div>
+                New Welcome
+              </Badge>
 
-              <motion.h1
-                variants={revealItem}
-                className="text-4xl font-black leading-tight sm:text-5xl lg:text-6xl"
+              <h1
+                className="max-w-3xl text-4xl font-black leading-[1.05] sm:text-5xl md:text-6xl"
                 style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
               >
-                Your developer portfolio
-                <span className="block bg-gradient-to-r from-cyan-500 via-blue-500 to-amber-500 bg-clip-text text-transparent">
-                  redesigned in minutes
+                Build a developer brand
+                <span className="block bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-500 bg-clip-text text-transparent">
+                  that feels alive.
                 </span>
-              </motion.h1>
+              </h1>
 
-              <motion.p variants={revealItem} className="mt-6 max-w-xl text-lg text-muted-foreground">
-                Build a profile that looks premium on day one. Pick a template, choose your color language,
-                and publish your work with a clean personal URL.
-              </motion.p>
+              <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
+                Clean, sharp, and ready for launch.
+              </p>
 
-              <motion.div variants={revealItem} className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <div className="flex flex-wrap gap-3">
                 <Link href="/auth/signin">
-                  <Button size="lg" className="group bg-cyan-600 px-8 text-white hover:bg-cyan-700">
-                    Create My Portfolio
-                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  <Button size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
+                    Enter dashboard
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <a href="#templates">
-                  <Button size="lg" variant="outline" className="px-8">
-                    Explore Templates
+                <Link href="/discover">
+                  <Button size="lg" variant="outline">
+                    Explore discover
                   </Button>
-                </a>
-              </motion.div>
+                </Link>
+              </div>
 
-              <motion.div variants={revealItem} className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-border bg-card/60 p-4">
-                  <p className="text-2xl font-black">{templateOptions.length}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Design Templates</p>
-                </div>
-                <div className="rounded-xl border border-border bg-card/60 p-4">
-                  <p className="text-2xl font-black">{themeOptions.length}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Theme Palettes</p>
-                </div>
-                <div className="rounded-xl border border-border bg-card/60 p-4">
-                  <p className="text-2xl font-black">Live</p>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Instant Preview</p>
-                </div>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              className="lg:col-span-6"
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.15 }}
-            >
-              <div className="rounded-3xl border border-border bg-card/70 p-4 shadow-2xl backdrop-blur-xl">
-                <div className="mb-4 flex items-center justify-between rounded-2xl border border-border/70 bg-background/70 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                  </div>
-                  <p
-                    className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground"
-                    style={{ fontFamily: '"IBM Plex Mono", "Menlo", "Consolas", monospace' }}
+              <div className="flex flex-wrap gap-2">
+                {quickCapsules.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-blue-200/70 bg-blue-50/80 px-3 py-1.5 text-xs font-medium text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300"
                   >
-                    /preview/live
-                  </p>
-                </div>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 p-5 text-slate-100">
-                  <div className="grid gap-4 sm:grid-cols-6">
-                    <div className="sm:col-span-4 rounded-xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Profile Header</p>
-                      <div className="mt-3 h-4 w-2/3 rounded bg-cyan-400/70" />
-                      <div className="mt-2 h-3 w-full rounded bg-slate-400/40" />
-                      <div className="mt-1.5 h-3 w-5/6 rounded bg-slate-400/25" />
+          <Card className="relative overflow-hidden border-blue-200/70 bg-card/85 backdrop-blur lg:col-span-5 dark:border-blue-900/40">
+            <div className="pointer-events-none absolute -right-16 top-6 h-44 w-44 rounded-full bg-cyan-500/20 blur-3xl" />
+            <CardContent className="p-6 sm:p-7">
+              <div className="rounded-2xl border border-border/80 bg-background/75 p-4 shadow-sm backdrop-blur">
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground">@yourname</p>
+                  <span className="inline-flex items-center rounded-full border border-blue-300/60 bg-blue-500/10 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:border-blue-900/60 dark:text-blue-300">
+                    Live
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  {previewStats.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between rounded-lg border border-border/80 bg-muted/40 px-3 py-2"
+                    >
+                      <span className="text-xs text-muted-foreground">{item.label}</span>
+                      <span className="text-sm font-semibold text-foreground">{item.value}</span>
                     </div>
-                    <div className="sm:col-span-2 rounded-xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Stats</p>
-                      <div className="mt-3 h-3 w-1/2 rounded bg-amber-400/70" />
-                      <div className="mt-2 h-3 w-2/3 rounded bg-cyan-400/60" />
-                    </div>
-                    <div className="sm:col-span-3 rounded-xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Projects</p>
-                      <div className="mt-3 space-y-2">
-                        <div className="h-3 w-full rounded bg-slate-300/35" />
-                        <div className="h-3 w-4/5 rounded bg-slate-300/25" />
-                        <div className="h-3 w-2/3 rounded bg-slate-300/20" />
-                      </div>
-                    </div>
-                    <div className="sm:col-span-3 rounded-xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Skills</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-md border border-white/20 px-2 py-1 text-xs">React</span>
-                        <span className="rounded-md border border-white/20 px-2 py-1 text-xs">Node</span>
-                        <span className="rounded-md border border-white/20 px-2 py-1 text-xs">TypeScript</span>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          </div>
-        </section>
 
-        <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-7xl">
-            <motion.div
-              className="mb-10 text-center"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
-            >
-              <h2
-                className="text-3xl font-black sm:text-4xl"
-                style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
-              >
-                Why Developers Pick DevLink
-              </h2>
-              <p className="mt-3 text-muted-foreground">
-                Built for speed, clarity, and profiles that feel personal.
-              </p>
-            </motion.div>
-
-            <motion.div
-              className="grid gap-4 md:grid-cols-3"
-              variants={revealContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-            >
-              {[
-                {
-                  icon: LayoutGrid,
-                  title: 'Template-first setup',
-                  text: 'Start with a layout language that matches your style, then tune details.',
-                },
-                {
-                  icon: Palette,
-                  title: 'Theme control',
-                  text: 'Switch across curated color systems without touching CSS.',
-                },
-                {
-                  icon: Share,
-                  title: 'Shareable by default',
-                  text: 'Publish instantly and send one clean URL to recruiters or clients.',
-                },
-              ].map((item) => (
-                <motion.div
-                  key={item.title}
-                  variants={revealItem}
-                  whileHover={{ y: -4 }}
-                  className="rounded-2xl border border-border bg-card/70 p-6 shadow-sm"
-                >
-                  <item.icon className="h-10 w-10 text-cyan-600" />
-                  <h3 className="mt-4 text-xl font-bold">{item.title}</h3>
-                  <p className="mt-2 text-muted-foreground">{item.text}</p>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        <section id="templates" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-7xl">
-            <motion.div
-              className="mb-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
-            >
-              <div>
-                <p
-                  className="text-xs uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300"
-                  style={{ fontFamily: '"IBM Plex Mono", "Menlo", "Consolas", monospace' }}
-                >
-                  Design Languages
-                </p>
-                <h2
-                  className="mt-2 text-3xl font-black sm:text-4xl"
-                  style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
-                >
-                  Four templates, one polished workflow
-                </h2>
-              </div>
-              <Link href="/auth/signin">
-                <Button variant="outline" className="gap-2">
-                  Try all templates
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-              variants={revealContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-            >
-              {templateOptions.map((template) => (
-                <motion.article
-                  key={template.id}
-                  variants={revealItem}
-                  whileHover={{ y: -4 }}
-                  className="rounded-2xl border border-border bg-card/70 p-4"
-                >
-                  <div
-                    className="h-28 rounded-xl border border-white/10"
-                    style={{
-                      backgroundImage:
-                        templatePreviewGradients[template.id] ?? templatePreviewGradients.editorial,
-                    }}
-                  />
-                  <h3 className="mt-4 text-lg font-bold">{template.name}</h3>
-                  <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                    {template.vibe}
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">{template.description}</p>
-                </motion.article>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-7xl">
-            <motion.div
-              className="rounded-3xl border border-border bg-card/70 p-6 md:p-10"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
-            >
-              <div className="grid gap-8 md:grid-cols-3">
+              <div className="mt-4 grid grid-cols-3 gap-2">
                 {[
-                  {
-                    icon: Zap,
-                    title: '1. Connect and setup',
-                    text: 'Sign in, reserve your username, and load your base profile instantly.',
-                  },
-                  {
-                    icon: Eye,
-                    title: '2. Customize with preview',
-                    text: 'Switch template, reorder sections, and tune themes with real-time feedback.',
-                  },
-                  {
-                    icon: Check,
-                    title: '3. Publish confidently',
-                    text: 'Share one clean URL that looks consistent across desktop and mobile.',
-                  },
-                ].map((step) => (
-                  <div key={step.title}>
-                    <step.icon className="h-10 w-10 text-cyan-600" />
-                    <h3 className="mt-4 text-xl font-bold">{step.title}</h3>
-                    <p className="mt-2 text-muted-foreground">{step.text}</p>
+                  { icon: Zap, label: 'Boost' },
+                  { icon: UsersRound, label: 'Connect' },
+                  { icon: Inbox, label: 'Reply' },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-border/80 bg-muted/35 px-2 py-3 text-center"
+                  >
+                    <item.icon className="h-4 w-4 text-blue-600" />
+                    <span className="text-[11px] font-medium text-muted-foreground">{item.label}</span>
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2
+              className="text-2xl font-black sm:text-3xl"
+              style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
+            >
+              Pick your path
+            </h2>
+            <Link href="/discover" className="hidden sm:inline-flex">
+              <Button variant="ghost">See discover</Button>
+            </Link>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {launchPaths.map((path) => (
+              <Card
+                key={path.title}
+                className="group relative overflow-hidden border-border/80 bg-card/80 backdrop-blur transition-all hover:-translate-y-1 hover:border-blue-300/80 hover:shadow-xl hover:shadow-blue-500/10"
+              >
+                <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-blue-500/10 blur-xl transition-opacity group-hover:opacity-100" />
+                <CardContent className="space-y-5 p-6">
+                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40">
+                    <path.icon className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold">{path.title}</h3>
+                    <p className="text-sm text-muted-foreground">{path.text}</p>
+                  </div>
+                  <Link href={path.href}>
+                    <Button variant="outline" className="w-full">
+                      {path.cta}
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </section>
 
-        <section className="px-4 pb-20 pt-10 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-5xl rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-cyan-600 to-blue-600 p-8 text-white md:p-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
-              className="text-center"
-            >
-              <h2
-                className="text-3xl font-black sm:text-4xl"
+        <section className="rounded-3xl border border-blue-200/70 bg-blue-50/75 p-6 dark:border-blue-900/40 dark:bg-blue-950/20 sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300">
+                Ready to go
+              </p>
+              <h3
+                className="text-2xl font-black"
                 style={{ fontFamily: '"Space Grotesk", "Avenir Next", "Segoe UI", sans-serif' }}
               >
-                Ship a better first impression today
-              </h2>
-              <p className="mx-auto mt-3 max-w-2xl text-cyan-50/90">
-                Create a portfolio that feels modern, intentional, and recruiter-ready from the first click.
-              </p>
-              <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link href="/auth/signin">
-                  <Button size="lg" className="bg-white text-cyan-700 hover:bg-cyan-50">
-                    Start Building
-                  </Button>
-                </Link>
-                <Link href="/auth/signin">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-white/70 bg-transparent text-white hover:bg-white/10"
-                  >
-                    View Dashboard
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
+                Make your link impossible to ignore.
+              </h3>
+            </div>
+            <Link href="/auth/signin">
+              <Button size="lg" className="bg-blue-600 text-white hover:bg-blue-700">
+                Launch now
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </section>
       </main>
-
-      <footer className="relative z-10 border-t border-border/70 bg-background/80 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2">
-            <Code className="h-5 w-5 text-cyan-600" />
-            <span className="font-semibold">DevLink</span>
-          </div>
-          <p className="text-sm text-muted-foreground">Portfolio builder for modern developers.</p>
-        </div>
-      </footer>
     </div>
   )
 }

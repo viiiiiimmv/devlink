@@ -9,6 +9,12 @@ export interface IInquiry extends Document {
   email: string
   message: string
   status: InquiryStatus
+  tags: string[]
+  archived: boolean
+  archivedAt?: Date | null
+  lastQuickReplyAt?: Date | null
+  ipHash?: string
+  userAgent?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -20,10 +26,17 @@ const InquirySchema = new Schema<IInquiry>({
   email: { type: String, required: true, trim: true, lowercase: true },
   message: { type: String, required: true, trim: true },
   status: { type: String, enum: ['new', 'replied'], default: 'new', index: true },
+  tags: [{ type: String, trim: true, lowercase: true }],
+  archived: { type: Boolean, default: false, index: true },
+  archivedAt: { type: Date, default: null },
+  lastQuickReplyAt: { type: Date, default: null },
+  ipHash: { type: String, trim: true, index: true },
+  userAgent: { type: String, trim: true },
 }, {
   timestamps: true,
 })
 
 InquirySchema.index({ username: 1, status: 1, createdAt: -1 })
+InquirySchema.index({ username: 1, archived: 1, createdAt: -1 })
 
 export default mongoose.models.Inquiry || mongoose.model<IInquiry>('Inquiry', InquirySchema)

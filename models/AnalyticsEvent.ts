@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose'
 
 export type AnalyticsEventType = 'view' | 'project_click'
-export type ProjectClickType = 'github' | 'live'
+export type ProjectClickType = 'github' | 'live' | 'case_study'
 
 export interface IAnalyticsEvent extends Document {
   username: string
@@ -24,7 +24,7 @@ const AnalyticsEventSchema = new Schema<IAnalyticsEvent>({
   eventType: { type: String, required: true, enum: ['view', 'project_click'] },
   projectId: { type: String, trim: true },
   projectTitle: { type: String, trim: true },
-  linkType: { type: String, enum: ['github', 'live'] },
+  linkType: { type: String, enum: ['github', 'live', 'case_study'] },
   referrer: { type: String, trim: true },
   referrerDomain: { type: String, trim: true },
   path: { type: String, trim: true },

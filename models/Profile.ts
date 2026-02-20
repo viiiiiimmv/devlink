@@ -12,12 +12,29 @@ export interface IProject {
   id: string
   title: string
   description: string
+  caseStudy?: string
   technologies: string[]
   githubUrl?: string
   liveUrl?: string
   image?: string
   imagePublicId?: string
+  gallery?: IProjectGalleryImage[]
+  metrics?: IProjectMetric[]
   featured: boolean
+}
+
+export interface IProjectGalleryImage {
+  id: string
+  url: string
+  caption?: string
+  publicId?: string
+}
+
+export interface IProjectMetric {
+  id: string
+  label: string
+  value: string
+  detail?: string
 }
 
 export interface IExperience {
@@ -134,15 +151,32 @@ export interface IProfilePublishSnapshot {
   template: string
 }
 
+const ProjectGalleryImageSchema = new Schema({
+  id: { type: String, required: true, trim: true },
+  url: { type: String, required: true, trim: true },
+  caption: { type: String, trim: true, maxlength: 180 },
+  publicId: { type: String, trim: true },
+}, { _id: false })
+
+const ProjectMetricSchema = new Schema({
+  id: { type: String, required: true, trim: true },
+  label: { type: String, required: true, trim: true, maxlength: 80 },
+  value: { type: String, required: true, trim: true, maxlength: 80 },
+  detail: { type: String, trim: true, maxlength: 180 },
+}, { _id: false })
+
 const ProjectSchema = new Schema({
   id: { type: String, required: true },
   title: { type: String, required: true, trim: true },
   description: { type: String, required: true, trim: true },
+  caseStudy: { type: String, trim: true, maxlength: 12000 },
   technologies: [{ type: String, trim: true }],
   githubUrl: { type: String, trim: true },
   liveUrl: { type: String, trim: true },
   image: { type: String, trim: true },
   imagePublicId: { type: String, trim: true },
+  gallery: { type: [ProjectGalleryImageSchema], default: [] },
+  metrics: { type: [ProjectMetricSchema], default: [] },
   featured: { type: Boolean, default: false },
 })
 

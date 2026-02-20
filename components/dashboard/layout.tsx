@@ -42,6 +42,21 @@ interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
+type NotificationConversationSummary = {
+  id: string
+  unreadCount?: number
+  lastMessageText?: string
+  peer?: {
+    name?: string
+  } | null
+}
+
+type IncomingSparkSummary = {
+  connectionId: string
+  peerName?: string
+  peerUsername?: string
+}
+
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Profile', href: '/dashboard/profile', icon: User },
@@ -77,10 +92,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ? session.user.image
       : undefined
   const isDesktopExpanded = !isDesktopCollapsed || isDesktopHovering
+  const unreadByConversationRef = useRef<Record<string, number>>({})
+  const incomingSparkIdsRef = useRef<Record<string, IncomingSparkSummary>>({})
+  const fallbackHydratedRef = useRef(false)
 
   useEffect(() => {
     isOnPulseChatRef.current = isOnPulseChat
   }, [isOnPulseChat])
+
+  useEffect(() => {
+    unreadByConversationRef.current = {}
+    incomingSparkIdsRef.current = {}
+    fallbackHydratedRef.current = false
+  }, [currentUserId])
 
   const fetchUnreadCount = useCallback(async () => {
     if (!currentUserId) return
@@ -113,6 +137,108 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       notification.close()
     }
   }, [])
+
+  const pollNotificationFallback = useCallback(async (options?: { notify?: boolean }) => {
+    if (!currentUserId) return
+
+    try {
+      const [chatResponse, networkResponse] = await Promise.all([
+        fetch('/api/chat/conversations', { cache: 'no-store' }),
+        fetch('/api/network/connections', { cache: 'no-store' }),
+      ])
+
+      if (!chatResponse.ok || !networkResponse.ok) {
+        return
+      }
+
+      const [chatData, networkData] = await Promise.all([
+        chatResponse.json(),
+        networkResponse.json(),
+      ])
+
+      const conversations = Array.isArray(chatData?.conversations)
+        ? chatData.conversations as NotificationConversationSummary[]
+        : []
+      const incomingSparks = Array.isArray(networkData?.incomingSparks)
+        ? networkData.incomingSparks as IncomingSparkSummary[]
+        : []
+
+      const totalUnread = conversations.reduce((sum, conversation) => {
+        const unread = Number(conversation?.unreadCount ?? 0)
+        if (!Number.isFinite(unread) || unread <= 0) return sum
+        return sum + unread
+      }, 0)
+      setUnreadPulseCount(totalUnread)
+
+      const shouldNotify = options?.notify === true && fallbackHydratedRef.current
+      const nextUnreadByConversation: Record<string, number> = {}
+
+      for (const conversation of conversations) {
+        const conversationId = typeof conversation?.id === 'string' ? conversation.id : ''
+        if (!conversationId) continue
+
+        const unread = Number(conversation?.unreadCount ?? 0)
+        const unreadCount = Number.isFinite(unread) && unread > 0 ? unread : 0
+        nextUnreadByConversation[conversationId] = unreadCount
+
+        if (!shouldNotify || isOnPulseChatRef.current) continue
+
+        const previousUnread = Number(unreadByConversationRef.current[conversationId] ?? 0)
+        if (unreadCount <= previousUnread || unreadCount <= 0) {
+          continue
+        }
+
+        const senderName = conversation.peer?.name || 'a contact'
+        const fallbackPreview = `${unreadCount - previousUnread} new message${unreadCount - previousUnread > 1 ? 's' : ''}`
+        const preview = typeof conversation?.lastMessageText === 'string' && conversation.lastMessageText.trim().length > 0
+          ? conversation.lastMessageText.trim().slice(0, 90)
+          : fallbackPreview
+
+        toast(`${senderName} sent a message`, {
+          description: preview,
+          action: {
+            label: 'Open',
+            onClick: () => {
+              window.location.href = `/dashboard/chats?conversation=${encodeURIComponent(conversationId)}`
+            },
+          },
+        })
+
+        maybeShowBrowserNotification(
+          `New message from ${senderName}`,
+          preview,
+          conversationId
+        )
+      }
+
+      const nextIncomingSparks: Record<string, IncomingSparkSummary> = {}
+      for (const spark of incomingSparks) {
+        const connectionId = typeof spark?.connectionId === 'string' ? spark.connectionId : ''
+        if (!connectionId) continue
+        nextIncomingSparks[connectionId] = spark
+      }
+
+      if (shouldNotify) {
+        const newSparks = Object.keys(nextIncomingSparks)
+          .filter((connectionId) => !incomingSparkIdsRef.current[connectionId])
+          .slice(0, 3)
+
+        for (const connectionId of newSparks) {
+          const spark = nextIncomingSparks[connectionId]
+          const name = typeof spark?.peerName === 'string' && spark.peerName.trim().length > 0
+            ? spark.peerName.trim()
+            : 'a developer'
+          toast.success(`New Link Spark from ${name}`)
+        }
+      }
+
+      unreadByConversationRef.current = nextUnreadByConversation
+      incomingSparkIdsRef.current = nextIncomingSparks
+      fallbackHydratedRef.current = true
+    } catch (error) {
+      console.error('Notification fallback polling failed:', error)
+    }
+  }, [currentUserId, maybeShowBrowserNotification])
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -160,10 +286,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     const handleVisibilitySync = () => {
       if (document.visibilityState !== 'visible') return
-      fetchUnreadCount()
+      if (notificationSocketConnected) {
+        fetchUnreadCount()
+        return
+      }
+
+      pollNotificationFallback({ notify: false })
     }
 
-    fetchUnreadCount()
+    if (notificationSocketConnected) {
+      fetchUnreadCount()
+    } else {
+      pollNotificationFallback({ notify: false })
+    }
+
     window.addEventListener('focus', handleVisibilitySync)
     document.addEventListener('visibilitychange', handleVisibilitySync)
 
@@ -171,7 +307,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       window.removeEventListener('focus', handleVisibilitySync)
       document.removeEventListener('visibilitychange', handleVisibilitySync)
     }
-  }, [currentUserId, fetchUnreadCount])
+  }, [currentUserId, fetchUnreadCount, notificationSocketConnected, pollNotificationFallback])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -240,11 +376,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         const handleConnect = () => {
           setNotificationSocketConnected(true)
+          fallbackHydratedRef.current = false
           fetchUnreadCount()
         }
 
         const handleDisconnect = () => {
           setNotificationSocketConnected(false)
+          fallbackHydratedRef.current = false
         }
 
         socket.on('chat:conversation:update', handleConversationUpdate)
@@ -262,6 +400,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       } catch (error) {
         console.error('Notification socket init failed:', error)
         setNotificationSocketConnected(false)
+        fallbackHydratedRef.current = false
       }
     }
 
@@ -275,6 +414,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         detachSocketHandlers()
       }
       setNotificationSocketConnected(false)
+      fallbackHydratedRef.current = false
       disconnectChatSocket()
     }
   }, [currentUserId, fetchUnreadCount, maybeShowBrowserNotification])
@@ -282,14 +422,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     if (!currentUserId || notificationSocketConnected) return
 
+    const runPollingSnapshot = () => {
+      pollNotificationFallback({ notify: fallbackHydratedRef.current })
+    }
+
+    runPollingSnapshot()
+
     const interval = window.setInterval(() => {
-      fetchUnreadCount()
+      runPollingSnapshot()
     }, 20000)
 
     return () => {
       window.clearInterval(interval)
     }
-  }, [currentUserId, fetchUnreadCount, notificationSocketConnected])
+  }, [currentUserId, notificationSocketConnected, pollNotificationFallback])
 
   return (
     <div className="min-h-screen bg-background">
