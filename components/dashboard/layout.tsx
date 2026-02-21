@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -58,21 +58,154 @@ type IncomingSparkSummary = {
   peerUsername?: string
 }
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'SparkForge', href: '/dashboard/sparkforge', icon: Lightbulb },
-  { name: 'Profile', href: '/dashboard/profile', icon: User },
-  { name: 'Projects', href: '/dashboard/projects', icon: Code },
-  { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
-  { name: 'Testimonials', href: '/dashboard/testimonials', icon: MessageSquare },
-  { name: 'Certifications', href: '/dashboard/certifications', icon: Award },
-  { name: 'Research Papers', href: '/dashboard/researches', icon: BookOpen },
-  { name: 'Talent Network', href: '/dashboard/network', icon: UsersRound },
-  { name: 'Pulse Chat', href: '/dashboard/chats', icon: MessagesSquare },
-  { name: 'Import', href: '/dashboard/import', icon: Download },
-  { name: 'Customise', href: '/dashboard/customise', icon: Palette },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+type NavigationItem = {
+  name: string
+  href: string
+  icon: typeof LayoutDashboard
+  description: string
+  showsUnreadBadge?: boolean
+}
+
+type NavigationGroup = {
+  label: string
+  items: NavigationItem[]
+}
+
+const navigationGroups: NavigationGroup[] = [
+  {
+    label: 'Workspace',
+    items: [
+      {
+        name: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutDashboard,
+        description: 'Overview of your activity and progress.',
+      },
+      {
+        name: 'SparkForge',
+        href: '/dashboard/sparkforge',
+        icon: Lightbulb,
+        description: 'Post ideas and discover collaborators.',
+      },
+    ],
+  },
+  {
+    label: 'Portfolio',
+    items: [
+      {
+        name: 'Profile',
+        href: '/dashboard/profile',
+        icon: User,
+        description: 'Manage core profile and identity.',
+      },
+      {
+        name: 'Projects',
+        href: '/dashboard/projects',
+        icon: Code,
+        description: 'Showcase featured project work.',
+      },
+      {
+        name: 'Experience',
+        href: '/dashboard/experience',
+        icon: Briefcase,
+        description: 'Maintain your work timeline.',
+      },
+      {
+        name: 'Testimonials',
+        href: '/dashboard/testimonials',
+        icon: MessageSquare,
+        description: 'Collect and publish feedback.',
+      },
+      {
+        name: 'Certifications',
+        href: '/dashboard/certifications',
+        icon: Award,
+        description: 'Add credentials and achievements.',
+      },
+      {
+        name: 'Research Papers',
+        href: '/dashboard/researches',
+        icon: BookOpen,
+        description: 'Publish papers and technical writing.',
+      },
+      {
+        name: 'Customise',
+        href: '/dashboard/customise',
+        icon: Palette,
+        description: 'Tune visual style and theme.',
+      },
+      {
+        name: 'Import',
+        href: '/dashboard/import',
+        icon: Download,
+        description: 'Bring profile data from external sources.',
+      },
+    ],
+  },
+  {
+    label: 'Connections',
+    items: [
+      {
+        name: 'Talent Network',
+        href: '/dashboard/network',
+        icon: UsersRound,
+        description: 'Grow your Code Circle with sparks.',
+      },
+      {
+        name: 'Pulse Chat',
+        href: '/dashboard/chats',
+        icon: MessagesSquare,
+        description: 'Message your active connections.',
+        showsUnreadBadge: true,
+      },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      {
+        name: 'Settings',
+        href: '/dashboard/settings',
+        icon: Settings,
+        description: 'Security, preferences, and account controls.',
+      },
+    ],
+  },
 ]
+
+const isNavItemActive = (pathname: string, href: string): boolean => {
+  if (href === '/dashboard') {
+    return pathname === '/dashboard'
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+const getActiveNavigationContext = (pathname: string): {
+  groupLabel: string
+  item: NavigationItem
+} => {
+  for (const group of navigationGroups) {
+    for (const item of group.items) {
+      if (isNavItemActive(pathname, item.href)) {
+        return {
+          groupLabel: group.label,
+          item,
+        }
+      }
+    }
+  }
+
+  return {
+    groupLabel: navigationGroups[0]?.label || 'Workspace',
+    item: navigationGroups[0]?.items[0] || {
+      name: 'Dashboard',
+      href: '/dashboard',
+      icon: LayoutDashboard,
+      description: 'Overview of your activity and progress.',
+    },
+  }
+}
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session } = useSession()
@@ -97,6 +230,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const unreadByConversationRef = useRef<Record<string, number>>({})
   const incomingSparkIdsRef = useRef<Record<string, IncomingSparkSummary>>({})
   const fallbackHydratedRef = useRef(false)
+  const activeNavigationContext = useMemo(
+    () => getActiveNavigationContext(activePathname),
+    [activePathname]
+  )
 
   useEffect(() => {
     isOnPulseChatRef.current = isOnPulseChat
@@ -283,6 +420,38 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return `${count}`
   }
 
+  const renderNavItem = (item: NavigationItem, options: { collapsed: boolean }) => {
+    const showUnread = Boolean(item.showsUnreadBadge) && unreadPulseCount > 0
+    const isActive = isNavItemActive(activePathname, item.href)
+
+    return (
+      <Link key={item.name} href={item.href}>
+        <div className={`relative flex items-center rounded-lg text-sm font-medium transition-colors ${
+          options.collapsed ? 'px-0 py-2 justify-center' : 'px-3 py-2 justify-start'
+        } ${
+          isActive
+            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}>
+          <item.icon className={`h-5 w-5 shrink-0 ${options.collapsed ? '' : 'mr-3'}`} />
+          {!options.collapsed ? (
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <span>{item.name}</span>
+              {showUnread ? (
+                <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                  {formatUnreadCount(unreadPulseCount)}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+          {options.collapsed && showUnread ? (
+            <span className="absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full bg-blue-600" />
+          ) : null}
+        </div>
+      </Link>
+    )
+  }
+
   useEffect(() => {
     if (!currentUserId) return
 
@@ -464,32 +633,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </button>
             </div>
             
-            <nav className="flex-1 px-4 py-6 space-y-2">
-              {navigation.map((item) => (
-                <Link key={item.name} href={item.href}>
-                  {(() => {
-                    const isPulseChatItem = item.href === '/dashboard/chats'
-                    const showUnread = isPulseChatItem && unreadPulseCount > 0
-
-                    return (
-                  <div className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activePathname === item.href
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}>
-                    <item.icon className="h-5 w-5 mr-3" />
-                    <span className="flex items-center gap-2">
-                      <span>{item.name}</span>
-                      {showUnread ? (
-                        <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-                          {formatUnreadCount(unreadPulseCount)}
-                        </span>
-                      ) : null}
-                    </span>
+            <nav className="flex-1 space-y-5 overflow-y-auto px-4 py-5">
+              {navigationGroups.map((group) => (
+                <section key={group.label} className="space-y-1.5">
+                  <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    {group.label}
+                  </p>
+                  <div className="space-y-1">
+                    {group.items.map((item) => renderNavItem(item, { collapsed: false }))}
                   </div>
-                    )
-                  })()}
-                </Link>
+                </section>
               ))}
             </nav>
           </div>
@@ -535,40 +688,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {isDesktopCollapsed ? 'Sidebar collapsed' : 'Sidebar expanded'}
           </div>
           
-          <nav className={`flex-1 py-6 space-y-2 transition-[padding] duration-200 ${isDesktopExpanded ? 'px-4' : 'px-2'}`}>
-            {navigation.map((item) => (
-              <Link key={item.name} href={item.href}>
-                {(() => {
-                  const isPulseChatItem = item.href === '/dashboard/chats'
-                  const showUnread = isPulseChatItem && unreadPulseCount > 0
-
-                  return (
-                <div className={`relative flex items-center rounded-lg text-sm font-medium transition-colors ${
-                  isDesktopExpanded ? 'px-3 py-2 justify-start' : 'px-0 py-2 justify-center'
-                } ${
-                  activePathname === item.href
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}>
-                  <item.icon className={`h-5 w-5 shrink-0 ${isDesktopExpanded ? 'mr-3' : ''}`} />
+          <nav className={`flex-1 overflow-y-auto py-5 transition-[padding] duration-200 ${isDesktopExpanded ? 'px-4' : 'px-2'}`}>
+            <div className="space-y-4">
+              {navigationGroups.map((group, groupIndex) => (
+                <section key={group.label} className="space-y-1.5">
                   {isDesktopExpanded ? (
-                    <span className="flex items-center gap-2 whitespace-nowrap">
-                      <span>{item.name}</span>
-                      {showUnread ? (
-                        <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-                          {formatUnreadCount(unreadPulseCount)}
-                        </span>
-                      ) : null}
-                    </span>
+                    <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      {group.label}
+                    </p>
+                  ) : groupIndex > 0 ? (
+                    <div className="mx-2 border-t border-border/70" />
                   ) : null}
-                  {!isDesktopExpanded && showUnread ? (
-                    <span className="absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full bg-blue-600" />
-                  ) : null}
-                </div>
-                  )
-                })()}
-              </Link>
-            ))}
+                  <div className="space-y-1">
+                    {group.items.map((item) => renderNavItem(item, { collapsed: !isDesktopExpanded }))}
+                  </div>
+                </section>
+              ))}
+            </div>
           </nav>
         </div>
       </div>
@@ -587,7 +723,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <div className="flex flex-1 justify-between px-4 lg:px-6">
             <div className="flex items-center">
-              {/* Breadcrumb or page title could go here */}
+              <div className="sm:hidden">
+                <p className="text-sm font-semibold text-foreground">
+                  {activeNavigationContext.item.name}
+                </p>
+              </div>
+              <div className="hidden sm:flex sm:flex-col sm:py-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {activeNavigationContext.groupLabel}
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {activeNavigationContext.item.name}
+                </p>
+              </div>
             </div>
             
             <div className="flex items-center gap-4">
